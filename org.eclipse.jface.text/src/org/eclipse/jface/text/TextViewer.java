@@ -52,6 +52,7 @@ import org.eclipse.swt.printing.PrinterData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.ScrollBar;
 
 import org.eclipse.jface.viewers.IPostSelectionProvider;
@@ -356,7 +357,7 @@ public class TextViewer extends Viewer implements
 			}
 		}
 		
-		/** List of registed verify key listeners. */
+		/** List of registered verify key listeners. */
 		private List fListeners= new ArrayList();
 		/** List of pending batches. */
 		private List fBatched= new ArrayList();
@@ -4731,6 +4732,47 @@ public class TextViewer extends Viewer implements
 			fTextPresentationListeners.remove(listener);
 			if (fTextPresentationListeners.size() == 0)
 				fTextPresentationListeners= null;
+		}
+	}
+	
+	/*
+	 * @see org.eclipse.jface.text.ITypingTarget#replace(int, int, java.lang.String)
+	 */
+	public void replace(int offset, int length, String text) throws BadLocationException {
+		Event event2= new Event();
+		event2.widget= getTextWidget();
+		VerifyEvent event= new VerifyEvent(event2);
+		event.start= modelOffset2WidgetOffset(offset);
+		event.end= modelOffset2WidgetOffset(offset + length);
+		event.text= text;
+		event.character= '\0';
+		event.doit= true;
+		int textLen= text == null ? 0 : text.length();
+		handleVerifyEvent(event);
+		if (event.doit) {
+			getDocument().replace(offset, length, text);
+			getTextWidget().setSelection(event.start + textLen);
+		}
+	} 
+	
+	/*
+	 * @see org.eclipse.jface.text.ITypingTarget#type(int, int, char, int)
+	 */
+	public void type(int offset, int length, char ch, int statemask) throws BadLocationException {
+		Event event2= new Event();
+		event2.widget= getTextWidget();
+		VerifyEvent event= new VerifyEvent(event2);
+		event.start= modelOffset2WidgetOffset(offset);
+		event.end= modelOffset2WidgetOffset(offset + length);
+		event.character= ch;
+		event.text= String.valueOf(ch);
+		event.stateMask= statemask;
+		event.doit= true;
+		fVerifyKeyListenersManager.verifyKey(event);
+		handleVerifyEvent(event);
+		if (event.doit && statemask == 0) {
+			getDocument().replace(offset, length, event.text);
+			getTextWidget().setSelection(event.start + 1);
 		}
 	}
 }
