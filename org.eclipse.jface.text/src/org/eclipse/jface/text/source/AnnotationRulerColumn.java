@@ -52,7 +52,7 @@ import org.eclipse.jface.text.TextViewer;
  * Will become final. Do not subclass.
  * @since 2.0
  */
-public class AnnotationRulerColumn implements IVerticalRulerColumn {
+public class AnnotationRulerColumn implements IVerticalRulerColumn, IVerticalRulerInfo, IVerticalRulerInfoExtension {
 	
 	/**
 	 * Internal listener class.
