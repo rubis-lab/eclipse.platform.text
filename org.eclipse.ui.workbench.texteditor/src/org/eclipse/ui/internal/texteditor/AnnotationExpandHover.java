@@ -65,6 +65,7 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 				return new AnnotationExpansionControl(parent, SWT.NO_TRIM, new CircularLayouter(true));
 			else
 				return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
+//				return new AnnotationExpansionControl(parent, SWT.NONE);
 		}
 
 		/*
