@@ -64,7 +64,7 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 			if (AnnotationBarHoverManager.USE_RADIAL_LAYOUT)
 				return new AnnotationExpansionControl(parent, SWT.NO_TRIM, new CircularLayouter(true));
 			else
-				return new AnnotationExpansionControl(parent, SWT.NO_TRIM | SWT.BORDER);
+				return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
 		}
 
 		/*
