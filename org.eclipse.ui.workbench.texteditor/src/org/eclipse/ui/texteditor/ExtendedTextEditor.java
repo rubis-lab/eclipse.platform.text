@@ -14,7 +14,9 @@ import java.util.Iterator;
 
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Menu;
 
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
@@ -41,6 +43,7 @@ import org.eclipse.jface.text.source.SourceViewer;
 
 import org.eclipse.ui.texteditor.quickdiff.QuickDiff;
 
+import org.eclipse.ui.internal.texteditor.AnnotationExpandHover;
 import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
 import org.eclipse.ui.internal.texteditor.quickdiff.DocumentLineDiffer;
 
@@ -636,7 +639,35 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 */
 	protected CompositeRuler createCompositeRuler() {
 		CompositeRuler ruler= new CompositeRuler();
-		ruler.addDecorator(0, new AnnotationRulerColumn(VERTICAL_RULER_WIDTH));
+		AnnotationRulerColumn column= new AnnotationRulerColumn(VERTICAL_RULER_WIDTH);
+		column.setHover(new AnnotationExpandHover(ruler, new IAnnotationListener() {
+
+			public void annotationSelected(AnnotationEvent event) {
+				// TODO forward to any registered annotation listeners!
+			}
+
+			public void annotationDefaultSelected(AnnotationEvent event) {
+				// TODO forward to any registered annotation listeners
+				// for now: just invoke ruler click action
+				triggerAction(ITextEditorActionConstants.RULER_CLICK);
+			}
+
+			public void annotationContextMenuAboutToShow(AnnotationEvent event, Menu menu) {
+				// TODO forward to any registered annotation listeners!
+			}
+	
+			private void triggerAction(String actionID) {
+				IAction action= getAction(actionID);
+				if (action != null) {
+					if (action instanceof IUpdate)
+						((IUpdate) action).update();
+					if (action.isEnabled())
+						action.run();
+				}
+			}
+			
+		}));
+		ruler.addDecorator(0, column);
 		
 		if (isLineNumberRulerVisible())
 			ruler.addDecorator(1, createLineNumberRulerColumn());

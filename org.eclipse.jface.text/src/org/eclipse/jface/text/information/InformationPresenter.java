@@ -428,14 +428,13 @@ public class InformationPresenter extends AbstractInformationControlManager impl
 	 * @see AbstractInformationControlManager#showInformationControl(Rectangle)
 	 */
 	protected void showInformationControl(Rectangle subjectArea) {
-		if (fTextViewer instanceof IWidgetTokenOwner) {
-			IWidgetTokenOwner owner= (IWidgetTokenOwner) fTextViewer;
-			if (owner.requestWidgetToken(this))
-				super.showInformationControl(subjectArea);
-				
-		} else if (fTextViewer instanceof IWidgetTokenOwnerExtension) {
+		if (fTextViewer instanceof IWidgetTokenOwnerExtension) {
 			IWidgetTokenOwnerExtension extension= (IWidgetTokenOwnerExtension) fTextViewer;
 			if (extension.requestWidgetToken(this, WIDGET_PRIORITY))
+				super.showInformationControl(subjectArea);
+		} else if (fTextViewer instanceof IWidgetTokenOwner) {
+			IWidgetTokenOwner owner= (IWidgetTokenOwner) fTextViewer;
+			if (owner.requestWidgetToken(this))
 				super.showInformationControl(subjectArea);
 		}
 	}

@@ -158,7 +158,7 @@ public class CompositeRuler implements IVerticalRuler, IVerticalRulerExtension {
 		}
 		
 		/**
-		 * Adds the given listener object as listner of the given type (<code>clazz</code>) to
+		 * Adds the given listener object as listener of the given type (<code>clazz</code>) to
 		 * the given control.
 		 * 
 		 * @param clazz the listener type

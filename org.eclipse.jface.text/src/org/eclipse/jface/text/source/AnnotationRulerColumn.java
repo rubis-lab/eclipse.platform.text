@@ -50,7 +50,7 @@ import org.eclipse.jface.text.TextViewer;
  * Will become final. Do not subclass.
  * @since 2.0
  */
-public class AnnotationRulerColumn implements IVerticalRulerColumn {
+public class AnnotationRulerColumn implements IVerticalRulerColumn, IVerticalRulerInfo, IVerticalRulerInfoExtension {
 	
 	/**
 	 * Internal listener class.
@@ -102,6 +102,8 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	private int fWidth;
 	/** Switch for enabling/disabling the setModel method. */
 	private boolean fAllowSetModel= true;
+	/** The hover for this column. */
+	private IAnnotationHover fHover;
 	
 	
 	/**
@@ -505,12 +507,35 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 		return fCachedTextViewer;
 	}
 	
-	/**
-	 * Returns this column's annotation model.
-	 * 
-	 * @return this column's annotation model
+	/*
+	 * @see org.eclipse.jface.text.source.IVerticalRulerInfoExtension#getModel()
 	 */
-	protected IAnnotationModel getModel() {
+	public IAnnotationModel getModel() {
 		return fModel;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IVerticalRulerInfo#getLineOfLastMouseButtonActivity()
+	 */
+	public int getLineOfLastMouseButtonActivity() {
+		return fParentRuler.getLineOfLastMouseButtonActivity();
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IVerticalRulerInfo#toDocumentLineNumber(int)
+	 */
+	public int toDocumentLineNumber(int y_coordinate) {
+		return fParentRuler.toDocumentLineNumber(y_coordinate);
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IVerticalRulerInfoExtension#getHover()
+	 */
+	public IAnnotationHover getHover() {
+		return fHover;
+	}
+	
+	public void setHover(IAnnotationHover hover) {
+		fHover= hover;
 	}
 }

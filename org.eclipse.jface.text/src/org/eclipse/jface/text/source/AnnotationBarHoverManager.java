@@ -15,16 +15,27 @@ package org.eclipse.jface.text.source;
 import java.util.Iterator;
 
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.MouseTrackAdapter;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Control;
 
 import org.eclipse.jface.text.AbstractHoverInformationControlManager;
+import org.eclipse.jface.text.AbstractInformationControlManager;
 import org.eclipse.jface.text.Assert;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IInformationControl;
 import org.eclipse.jface.text.IInformationControlCreator;
+import org.eclipse.jface.text.IInformationControlExtension3;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewerExtension3;
@@ -37,6 +48,177 @@ import org.eclipse.jface.text.ITextViewerExtension3;
  * @since 2.0
  */
 public class AnnotationBarHoverManager extends AbstractHoverInformationControlManager {
+	
+	/**
+	 * The  information control closer for the hover information. Closes the information control as 
+	 * soon as the mouse pointer leaves the subject area, a mouse button is pressed, the user presses a key,
+	 * or the subject control is resized or moved.
+	 */
+	protected class Closer extends MouseTrackAdapter 
+	implements IInformationControlCloser, MouseListener, MouseMoveListener, ControlListener, KeyListener, DisposeListener {
+		
+		/** The closer's subject control */
+		private Control fSubjectControl;
+		/** The subject area */
+		private Rectangle fSubjectArea;
+		/** Indicates whether this closer is active */
+		private boolean fIsActive= false;
+		/** The information control. */
+		private IInformationControl fInformationControl;
+		boolean fIsInformationListener;
+		
+		/**
+		 * Creates a new information control closer.
+		 */
+		public Closer() {
+		}
+		
+		/*
+		 * @see IInformationControlCloser#setSubjectControl(Control)
+		 */
+		public void setSubjectControl(Control control) {
+			fSubjectControl= control;
+		}
+		
+		/*
+		 * @see IInformationControlCloser#setHoverControl(IHoverControl)
+		 */
+		public void setInformationControl(IInformationControl control) {
+			fInformationControl= control;
+		}
+		
+		/*
+		 * @see IInformationControlCloser#start(Rectangle)
+		 */
+		public void start(Rectangle subjectArea) {
+			
+			if (fIsActive) return;
+			fIsActive= true;
+			
+			fSubjectArea= subjectArea;
+		
+			// if this is a popup that takes mouse events and will allow hovering, then
+			// don't install the mouse listeners but just trust the information control to
+			// dispose of itself once its no longer used.
+			if (fInformationControl instanceof IInformationControlExtension3 && ((IInformationControlExtension3)fInformationControl).isMouseController()) {
+				// transfer mouse handling to the information control
+				fInformationControl.addDisposeListener(this);
+			} else if (fSubjectControl != null && !fSubjectControl.isDisposed()) {
+				fSubjectControl.addMouseListener(this);
+				fSubjectControl.addMouseMoveListener(this);
+				fSubjectControl.addMouseTrackListener(this);
+			}
+			
+			// install control and key listeners on subject control in any case 
+			if (fSubjectControl != null && !fSubjectControl.isDisposed()) {
+				fSubjectControl.addControlListener(this);
+				fSubjectControl.addKeyListener(this);
+			}
+		}
+		
+		/*
+		 * @see IInformationControlCloser#stop()
+		 */
+		public void stop() {
+			stop(false);
+		}
+		
+		/**
+		 * Stops the information control and if <code>delayRestart</code> is set
+		 * allows restart only after a certain delay.
+		 * 
+		 * @param delayRestart <code>true</code> if restart should be delayed
+		 */
+		protected void stop(boolean delayRestart) {
+			
+			if (!fIsActive) return;
+			fIsActive= false;
+			
+			hideInformationControl();
+			
+			if (fInformationControl instanceof IInformationControlExtension3 && ((IInformationControlExtension3)fInformationControl).isMouseController()) {
+				fInformationControl.removeDisposeListener(this);
+			} else if (fSubjectControl != null && !fSubjectControl.isDisposed()) {
+				fSubjectControl.removeMouseListener(this);
+				fSubjectControl.removeMouseMoveListener(this);
+				fSubjectControl.removeMouseTrackListener(this);
+			}
+			
+			if (fSubjectControl != null && !fSubjectControl.isDisposed()) {
+				fSubjectControl.removeControlListener(this);
+				fSubjectControl.removeKeyListener(this);
+			}			
+		}
+		
+		/*
+		 * @see org.eclipse.swt.events.MouseMoveListener#mouseMove(org.eclipse.swt.events.MouseEvent)
+		 */
+		public void mouseMove(MouseEvent event) {
+			if (!fSubjectArea.contains(event.x, event.y))
+				stop();
+		}
+		
+		/*
+		 * @see org.eclipse.swt.events.MouseListener#mouseUp(org.eclipse.swt.events.MouseEvent)
+		 */
+		public void mouseUp(MouseEvent event) {
+		}
+		
+		/*
+		 * @see MouseListener#mouseDown(MouseEvent)
+		 */
+		public void mouseDown(MouseEvent event) {
+			stop();
+		}
+		
+		/*
+		 * @see MouseListener#mouseDoubleClick(MouseEvent)
+		 */
+		public void mouseDoubleClick(MouseEvent event) {
+			stop();
+		}
+		
+		/*
+		 * @see MouseTrackAdapter#mouseExit(MouseEvent)
+		 */
+		public void mouseExit(MouseEvent event) {
+			stop();
+		}
+		
+		/*
+		 * @see ControlListener#controlResized(ControlEvent)
+		 */
+		public void controlResized(ControlEvent event) {
+			stop();
+		}
+		
+		/*
+		 * @see ControlListener#controlMoved(ControlEvent)
+		 */
+		public void controlMoved(ControlEvent event) {
+			stop();
+		}
+		
+		/*
+		 * @see KeyListener#keyReleased(KeyEvent)
+		 */
+		public void keyReleased(KeyEvent event) {
+		}
+		
+		/*
+		 * @see KeyListener#keyPressed(KeyEvent)
+		 */
+		public void keyPressed(KeyEvent event) {
+			stop(true);
+		}
+
+		/*
+		 * @see org.eclipse.swt.events.DisposeListener#widgetDisposed(org.eclipse.swt.events.DisposeEvent)
+		 */
+		public void widgetDisposed(DisposeEvent e) {
+			stop();
+		}
+	}
 	
 	/** The source viewer the manager is connected to */
 	private ISourceViewer fSourceViewer;
@@ -81,6 +263,7 @@ public class AnnotationBarHoverManager extends AbstractHoverInformationControlMa
 		
 		setAnchor(ANCHOR_RIGHT);
 		setMargins(5, 0);
+		setCloser(new Closer());
 	}	
 	
 	/*
@@ -91,7 +274,12 @@ public class AnnotationBarHoverManager extends AbstractHoverInformationControlMa
 		IAnnotationHover hover= getHover(event);
 
 		int line= getHoverLine(event);
-		if (hover instanceof IAnnotationHoverExtension) {
+		
+		if (hover instanceof IAnnotationHoverExtension2) {
+			IAnnotationHoverExtension2 expandHover= (IAnnotationHoverExtension2) hover;
+			setCustomInformationControlCreator(expandHover.getInformationControlCreator());
+			setInformation(expandHover.getHoverInfo2(fSourceViewer, line), computeArea(line));
+		} else if (hover instanceof IAnnotationHoverExtension) {
 			IAnnotationHoverExtension extension= (IAnnotationHoverExtension) hover;
 			setCustomInformationControlCreator(extension.getInformationControlCreator());
 			setInformation(extension.getHoverInfo(fSourceViewer, line, fSourceViewer.getTopIndex(), fSourceViewer.getBottomIndex()), computeArea(line));
@@ -239,6 +427,43 @@ public class AnnotationBarHoverManager extends AbstractHoverInformationControlMa
 				return computeViewerRange(lineRange);
 		}
 		return super.computeInformationControlLocation(subjectArea, controlSize);
+	}
+	
+	/*
+	 * @see org.eclipse.jface.text.AbstractInformationControlManager#computeLocation(org.eclipse.swt.graphics.Rectangle, org.eclipse.swt.graphics.Point, org.eclipse.jface.text.AbstractInformationControlManager.Anchor)
+	 */
+	protected Point computeLocation(Rectangle subjectArea, Point controlSize, Anchor anchor) {
+		MouseEvent event= getHoverEvent();
+		IAnnotationHover hover= getHover(event);
+		
+		if (hover instanceof IAnnotationHoverExtension2) {
+			Control subjectControl= getSubjectControl();
+			// return a location that just overlaps the annotation on the bar
+			if (anchor == AbstractInformationControlManager.ANCHOR_RIGHT)
+				return subjectControl.toDisplay(subjectArea.x - 4, subjectArea.y - 2);
+			else if (anchor == AbstractHoverInformationControlManager.ANCHOR_LEFT)
+				return subjectControl.toDisplay(subjectArea.x + subjectArea.width - controlSize.x + 4, subjectArea.y - 2);
+		}
+		return super.computeLocation(subjectArea, controlSize, anchor);
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.AbstractInformationControlManager#showInformationControl(org.eclipse.swt.graphics.Rectangle)
+	 */
+	protected void showInformationControl(Rectangle subjectArea) {
+//		if (getHover(getHoverEvent()) instanceof AnnotationExpandHover) {
+//			// set subject area to be the size of the popup
+////			Control control= ((AnnotationExpansionControl) getInformationControl()).getControl();
+////			Point point= control.getSize();
+////			Point point= getInformationControl().computeSizeHint();
+////			Rectangle rect= new Rectangle(0, 0, point.x, point.y);
+//			
+//			Rectangle rect= new Rectangle(0, 0, 50, 20);
+//			super.showInformationControl(rect);
+//			return;
+//		}
+		super.showInformationControl(subjectArea);
+		
 	}
 
 	/**

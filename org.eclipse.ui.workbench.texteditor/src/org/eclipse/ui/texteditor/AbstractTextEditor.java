@@ -1315,6 +1315,27 @@ public abstract class AbstractTextEditor extends EditorPart implements ITextEdit
 			return String.valueOf(fValue);
 		}
 	}
+	
+	private class AnnotationService implements IAnnotationService {
+
+		/*
+		 * @see org.eclipse.ui.texteditor.IAnnotationService#addAnnotationListener(org.eclipse.ui.texteditor.IAnnotationListener)
+		 */
+		public void addAnnotationListener(IAnnotationListener listener) {
+			Assert.isNotNull(listener);
+			if (!fAnnotationListeners.contains(listener))
+				fAnnotationListeners.add(listener);
+		}
+
+		/*
+		 * @see org.eclipse.ui.texteditor.IAnnotationService#removeAnnotationListener(org.eclipse.ui.texteditor.IAnnotationListener)
+		 */
+		public void removeAnnotationListener(IAnnotationListener listener) {
+			fAnnotationListeners.remove(listener);
+		}
+		
+	}
+	
 	/** The pattern used to show the position label in the status line. */
 	private final String fPositionLabelPattern= EditorMessages.getString("Editor.statusline.position.pattern"); //$NON-NLS-1$
 	/** The position label value of the current line. */
@@ -1526,6 +1547,8 @@ public abstract class AbstractTextEditor extends EditorPart implements ITextEdit
 	 * @since 3.0
 	 */
 	private Caret fSmartInsertModeCaret;
+	private IAnnotationService fAnnotationService= new AnnotationService();
+	protected List fAnnotationListeners= new ArrayList();
 	
 	
 	/**
@@ -4097,6 +4120,10 @@ public abstract class AbstractTextEditor extends EditorPart implements ITextEdit
 				return extension.getRewriteTarget();
 			}
 			return null;
+		}
+		
+		if (IAnnotationService.class.equals(required)) {
+			return fAnnotationService;
 		}
 		
 		return super.getAdapter(required);
