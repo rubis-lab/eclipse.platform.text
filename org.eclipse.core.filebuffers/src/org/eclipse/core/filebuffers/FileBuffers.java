@@ -10,7 +10,14 @@ Contributors:
 **********************************************************************/
 package org.eclipse.core.filebuffers;
 
+import java.io.File;
+
 import org.eclipse.core.internal.filebuffers.FileBuffersPlugin;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
 
 /**
  * Facade for the file buffers plug-in. Provides access to the
@@ -33,5 +40,66 @@ public final class FileBuffers {
 	 */
 	public static ITextFileBufferManager getTextFileBufferManager()  {
 		return FileBuffersPlugin.getDefault().getFileBufferManager();
+	}
+	
+	/**
+	 * Returns the workspace file at the given location or <code>null</code> if
+	 * the location is not a valid location in the workspace.
+	 * 
+	 * @param location the location
+	 * @return the workspace file at the location or <code>null</code>
+	 */
+	public static IFile getWorkspaceFileAtLocation(IPath location) {
+		IPath normalized= normalizeLocation(location);
+		IWorkspaceRoot workspaceRoot= ResourcesPlugin.getWorkspace().getRoot();
+		IFile file= workspaceRoot.getFile(normalized);
+		if  (file != null && file.exists())
+			return file;
+		return null;
+	}
+	
+	/**
+	 * Returns a copy of the given location in a normalized form.
+	 * 
+	 * @param location the location to be normalized
+	 * @return normalized copy of location
+	 */
+	public static IPath normalizeLocation(IPath location) {
+		IWorkspaceRoot workspaceRoot= ResourcesPlugin.getWorkspace().getRoot();
+		IProject[] projects= workspaceRoot.getProjects();
+		
+		for (int i= 0, length= projects.length; i < length; i++) {
+			IPath path= projects[i].getLocation();
+			if (path.isPrefixOf(location)) {
+				IPath filePath= location.removeFirstSegments(path.segmentCount());
+				filePath= projects[i].getFullPath().append(filePath);
+				return filePath.makeAbsolute();
+			}
+			
+		}
+		return location.makeAbsolute();
+	}
+	
+	/**
+	 * Returns the file in the local file system for the given location.
+	 * <p>
+	 * The location is either a full path of a workspace resource or an
+	 * absolute path in the local file system.
+	 * </p>
+	 * 
+	 * @param location
+	 * @return
+	 */
+	public static File getSystemFileAtLocation(IPath location) {
+		if (location == null)
+			return null;
+		
+		IFile file= getWorkspaceFileAtLocation(location);
+		if (file != null) {
+			IPath path= file.getLocation();
+			return path.toFile();
+		}
+		
+		return location.toFile();
 	}
 }

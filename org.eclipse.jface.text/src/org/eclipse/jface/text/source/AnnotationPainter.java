@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
@@ -33,20 +34,23 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.IPainter;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextPresentationListener;
+import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension3;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.Region;
+import org.eclipse.jface.text.TextPresentation;
 
 
 
 /**
- * Paints annotations provided by an annotation model as squigglies onto an 
- * associated source viewer. Clients usually instantiate and configure objects
- * of this class.
+ * Paints annotations provided by an annotation model as squiggly lines and/or
+ * highlighted onto an associated source viewer.
+ * Clients usually instantiate and configure objects of this class.
  * 
  * @since 2.1
  */
-public class AnnotationPainter implements IPainter, PaintListener, IAnnotationModelListener {	
+public class AnnotationPainter implements IPainter, PaintListener, IAnnotationModelListener, ITextPresentationListener {	
 	
 	/** 
 	 * The presentation information (decoration) for an annotation.  Each such
@@ -54,11 +58,16 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 */
 	private static class Decoration {
 		/** The position of this decoration */
-		Position fPosition;
+		private Position fPosition;
 		/** The color of this decoration */
-		Color fColor;
+		private Color fColor;
 		/** Indicates whether this decoration might span multiple lines */
-		boolean fMultiLine;
+		private	boolean fMultiLine;
+		/**
+		 * The annotation's layer
+		 * @since 3.0
+		 */
+		private int fLayer;
 	}
 	
 	/** Indicates whether this painter is active */
@@ -77,10 +86,25 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	private IAnnotationAccess fAnnotationAccess;
 	/** The list of decorations */
 	private List fDecorations= new ArrayList();
+	/**
+	 * The list of highlighted decorations.
+	 * @since 3.0
+	 */
+	private List fHighlightedDecorations= new ArrayList();
 	/** The internal color table */
 	private Map fColorTable= new HashMap();
 	/** The list of types of annotations that are painted by this painter */
 	private Set fAnnotationTypes= new HashSet();
+	/**
+	 * The list of types of annotations that are highlighted by this painter.
+	 * @since 3.0
+	 */
+	private Set fHighlightAnnotationTypes= new HashSet();
+	/**
+	 * The range in which all highlight annotations can be found.
+	 * @since 3.0
+	 */
+	private Position fHighlightAnnotationRange= new Position(0);
 
 	
 	/**
@@ -98,9 +122,9 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	}
 	
 	/** 
-	 * Returns whether this painter has to draw any suiggly.
+	 * Returns whether this painter has to draw any squiggle.
 	 * 
-	 * @return <code>true</code> if there are squigglies to be drawn, <code>false</code> otherwise
+	 * @return <code>true</code> if there are squiggles to be drawn, <code>false</code> otherwise
 	 */
 	private boolean hasDecorations() {
 		return !fDecorations.isEmpty();
@@ -159,9 +183,14 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * Updates the set of decorations based on the current state of
 	 * the painter's annotation model.
 	 */
-	private void catchupWithModel() {	
-		if (fDecorations != null) {
+	private synchronized void catchupWithModel() {	
+		if (fDecorations != null && fHighlightAnnotationTypes != null) {
 			fDecorations.clear();
+			fHighlightedDecorations.clear();
+			
+			int highlightAnnotationRangeStart= Integer.MAX_VALUE; 			
+			int highlightAnnotationRangeEnd= -1;
+			
 			if (fModel != null) {
 				
 				Iterator e= fModel.getAnnotationIterator();
@@ -173,7 +202,9 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 						continue;
 						
 					Color color= null;
-					if (fAnnotationTypes.contains(annotationType))
+					boolean isHighlighting= fHighlightAnnotationTypes.contains(annotationType);
+					boolean isDrawingSquiggles= fAnnotationTypes.contains(annotationType); 
+					if (isDrawingSquiggles || isHighlighting)
 						color= (Color) fColorTable.get(annotationType);
 					
 					if (color != null) {
@@ -185,20 +216,64 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 						pp.fPosition= position;
 						pp.fColor= color;
 						pp.fMultiLine= fAnnotationAccess.isMultiLine(annotation);
-						fDecorations.add(pp);
+						pp.fLayer= annotation.getLayer();
+						
+						if (isDrawingSquiggles)
+							fDecorations.add(pp);
+						
+						if (isHighlighting) {
+							fHighlightedDecorations.add(pp);
+							highlightAnnotationRangeStart= Math.min(highlightAnnotationRangeStart, position.offset);
+							highlightAnnotationRangeEnd= Math.max(highlightAnnotationRangeEnd, position.offset + position.length);
+						}
 					}
+				}
+				if (!fHighlightedDecorations.isEmpty()) {
+					fHighlightAnnotationRange.offset= highlightAnnotationRangeStart;
+					fHighlightAnnotationRange.length= highlightAnnotationRangeEnd - highlightAnnotationRangeStart;
 				}
 			}
 		}
 	}
 	
 	/**
-	 * Recomputes the squigglies to be drawn and redraws them.
+	 * Recomputes the squiggles to be drawn and redraws them.
 	 */
 	private void updatePainting() {
 		disablePainting(true);
-		catchupWithModel();							
+		
+		catchupWithModel();
+		
+		invalidateTextPresentation();
+		
 		enablePainting();
+	}
+
+	private void invalidateTextPresentation() {
+		if (fSourceViewer instanceof ITextViewerExtension2) {
+			IRegion r= getWidgetRange(fHighlightAnnotationRange);
+			if (r != null)
+				((ITextViewerExtension2)fSourceViewer).invalidateTextPresentation(r.getOffset(), r.getLength());
+		} else {
+			fSourceViewer.invalidateTextPresentation();
+		}
+	}
+
+	/*
+	 * @see ITextPresentationListener#applyTextPresentation(TextPresentation, IRegion)
+	 * @since 3.0
+	 */
+	public synchronized void applyTextPresentation(TextPresentation tp, IRegion region) {
+		for (Iterator iter= fHighlightedDecorations.iterator(); iter.hasNext();) {
+
+			Decoration pp = (Decoration)iter.next();
+			Position p= pp.fPosition;
+			if (!fSourceViewer.overlapsWithVisibleRegion(p.offset, p.length))
+				continue;
+
+			if (p.getOffset() + p.getLength() >= region.getOffset() && region.getOffset() + region.getLength() > p.getOffset())
+				tp.mergeStyleRange(new StyleRange(p.getOffset(), p.getLength(), null, pp.fColor));
+		}
 	}
 	
 	/*
@@ -248,6 +323,19 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	}
 	
 	/**
+	 * Adds the given annotation type to the list of annotation types whose
+	 * annotations should be highlighted this painter. If the annotation  type
+	 * is already in this list, this method is without effect.
+	 * 
+	 * @param annotationType the annotation type
+	 * @since 3.0
+	 */
+	public void addHighlightAnnotationType(Object annotationType) {
+		fHighlightAnnotationTypes.add(annotationType);
+	
+	}
+	
+	/**
 	 * Removes the given annotation type from the list of annotation types whose
 	 * annotations are painted by this painter. If the annotation type is not
 	 * in this list, this method is wihtout effect.
@@ -259,11 +347,24 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	}
 	
 	/**
+	 * Removes the given annotation type from the list of annotation types whose
+	 * annotations are highlighted by this painter. If the annotation type is not
+	 * in this list, this method is wihtout effect.
+	 * 
+	 * @param annotationType the annotation type
+	 * @since 3.0
+	 */
+	public void removeHighlightAnnotationType(Object annotationType) {
+		fHighlightAnnotationTypes.remove(annotationType);
+	}
+	
+	/**
 	 * Clears the list of annotation types whose annotations are
 	 * painted by this painter.
 	 */
 	public void removeAllAnnotationTypes() {
 		fAnnotationTypes.clear();
+		fHighlightAnnotationTypes.clear();
 	}
 	
 	/**
@@ -273,7 +374,7 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * @return <code>true</code> if there is an annotation type whose annotations are painted
 	 */
 	public boolean isPaintingAnnotations() {
-		return !fAnnotationTypes.isEmpty();
+		return !fAnnotationTypes.isEmpty() || !fHighlightAnnotationTypes.isEmpty();
 	}
 	
 	/*
@@ -288,12 +389,17 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 		if (fAnnotationTypes != null)
 			fAnnotationTypes.clear();
 		fAnnotationTypes= null;
+
+		if (fHighlightAnnotationTypes != null)
+			fHighlightAnnotationTypes.clear();
+		fHighlightAnnotationTypes= null;
 		
 		fTextWidget= null;
 		fSourceViewer= null;
 		fAnnotationAccess= null;
 		fModel= null;
 		fDecorations= null;
+		fHighlightedDecorations= null;
 	}
 
 	/**
@@ -342,39 +448,48 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 		// http://bugs.eclipse.org/bugs/show_bug.cgi?id=17147
 		int vLength= fSourceViewer.getBottomIndexEndOffset() + 1;		
 		
-		for (Iterator e = fDecorations.iterator(); e.hasNext();) {
-			Decoration pp = (Decoration) e.next();
-			Position p= pp.fPosition;
-			if (p.overlapsWith(vOffset, vLength)) {
-								
-				if (!pp.fMultiLine) {
-					
-					IRegion widgetRange= getWidgetRange(p);
-					if (widgetRange != null)
-						draw(gc, widgetRange.getOffset(), widgetRange.getLength(), pp.fColor);
+		for (int layer= 0, maxLayer= 1;	layer < maxLayer; layer++) {
+			
+			for (Iterator e = fDecorations.iterator(); e.hasNext();) {
 				
-				} else {
-					
-					IDocument document= fSourceViewer.getDocument();
-					try {
-												
-						int startLine= document.getLineOfOffset(p.getOffset()); 
-						int lastInclusive= Math.max(p.getOffset(), p.getOffset() + p.getLength() - 1);
-						int endLine= document.getLineOfOffset(lastInclusive);
+				Decoration pp = (Decoration) e.next();
+	
+				maxLayer= Math.max(maxLayer, pp.fLayer + 1);	// dynamically update layer maximum
+				if (pp.fLayer != layer)	// wrong layer: skip annotation
+					continue;
+				
+				Position p= pp.fPosition;
+				if (p.overlapsWith(vOffset, vLength)) {
+									
+					if (!pp.fMultiLine) {
 						
-						for (int i= startLine; i <= endLine; i++) {
-							IRegion line= document.getLineInformation(i);
-							int paintStart= Math.max(line.getOffset(), p.getOffset());
-							int paintEnd= Math.min(line.getOffset() + line.getLength(), p.getOffset() + p.getLength());
-							if (paintEnd > paintStart) {
-								// otherwise inside a line delimiter
-								IRegion widgetRange= getWidgetRange(new Position(paintStart, paintEnd - paintStart));
-								if (widgetRange != null)
-									draw(gc, widgetRange.getOffset(), widgetRange.getLength(), pp.fColor);
-							}
-						}
+						IRegion widgetRange= getWidgetRange(p);
+						if (widgetRange != null)
+							draw(gc, widgetRange.getOffset(), widgetRange.getLength(), pp.fColor);
 					
-					} catch (BadLocationException x) {
+					} else {
+						
+						IDocument document= fSourceViewer.getDocument();
+						try {
+													
+							int startLine= document.getLineOfOffset(p.getOffset()); 
+							int lastInclusive= Math.max(p.getOffset(), p.getOffset() + p.getLength() - 1);
+							int endLine= document.getLineOfOffset(lastInclusive);
+							
+							for (int i= startLine; i <= endLine; i++) {
+								IRegion line= document.getLineInformation(i);
+								int paintStart= Math.max(line.getOffset(), p.getOffset());
+								int paintEnd= Math.min(line.getOffset() + line.getLength(), p.getOffset() + p.getLength());
+								if (paintEnd > paintStart) {
+									// otherwise inside a line delimiter
+									IRegion widgetRange= getWidgetRange(new Position(paintStart, paintEnd - paintStart));
+									if (widgetRange != null)
+										draw(gc, widgetRange.getOffset(), widgetRange.getLength(), pp.fColor);
+								}
+							}
+						
+						} catch (BadLocationException x) {
+						}
 					}
 				}
 			}
@@ -389,6 +504,9 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * @return the corresponding widget region
 	 */
 	private IRegion getWidgetRange(Position p) {
+		if (p == null)
+			return null;
+		
 		if (fSourceViewer instanceof ITextViewerExtension3) {
 			
 			ITextViewerExtension3 extension= (ITextViewerExtension3) fSourceViewer;
@@ -501,7 +619,6 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * @see IPainter#paint(int)
 	 */
 	public void paint(int reason) {
-		
 		if (fSourceViewer.getDocument() == null) {
 			deactivate(false);
 			return;

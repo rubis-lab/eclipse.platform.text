@@ -9,7 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 import org.eclipse.core.resources.IMarker;
@@ -25,7 +25,7 @@ import org.eclipse.jface.text.source.Annotation;
  *
  * @see org.eclipse.core.resources.IMarker
  */
-public class MarkerAnnotation extends Annotation implements IAnnotationExtension {
+public class MarkerAnnotation extends Annotation /*implements IAnnotationExtension*/ {
 	
 	/** The marker this annotation represents */
 	private IMarker fMarker;

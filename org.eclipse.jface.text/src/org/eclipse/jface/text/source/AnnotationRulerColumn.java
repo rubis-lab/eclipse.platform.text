@@ -12,7 +12,9 @@
 package org.eclipse.jface.text.source;
 
 
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -107,10 +109,47 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 * @since 3.0
 	 */
 	private IAnnotationAccess fAnnotationAccess;
+	/**
+	 * The list of annotation types to be shown in this ruler.
+	 * @since 3.0
+	 */
+	private Set fAnnotationTypes= new HashSet();
+	/**
+	 * The annotation access.
+	 * @since 3.0
+	 */
+	private IAnnotationAccess fAnnotationAccess;
 	
 	
 	/**
-	 * Constructs this column with the given width.
+	 * Constructs this column with the given arguments.
+	 *
+	 * @param width the width of the vertical ruler
+	 * @param annotationAccess the annotation access
+	 * @since 3.0
+	 */
+	public AnnotationRulerColumn(IAnnotationModel model, int width, IAnnotationAccess annotationAccess) {
+		fWidth= width;
+		fAllowSetModel= false;
+		fModel= model;
+		fModel.addAnnotationModelListener(fInternalListener);
+		fAnnotationAccess= annotationAccess;
+	}
+	
+	/**
+	 * Constructs this column with the given arguments.
+	 *
+	 * @param width the width of the vertical ruler
+	 * @param annotationAccess the annotation access
+	 * @since 3.0
+	 */
+	public AnnotationRulerColumn(int width, IAnnotationAccess annotationAccess) {
+		fWidth= width;
+		fAnnotationAccess= annotationAccess;
+	}
+	
+	/**
+	 * Constructs this column with the given arguments.
 	 *
 	 * @param width the width of the vertical ruler
 	 */
@@ -128,11 +167,6 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 */
 	public AnnotationRulerColumn(int width) {
 		fWidth= width;
-	}
-	
-	
-	public void setAnnotationAccess(IAnnotationAccess access) {
-		fAnnotationAccess= access;
 	}
 	
 	/*
@@ -162,7 +196,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 		
 		fCanvas.addPaintListener(new PaintListener() {
 			public void paintControl(PaintEvent event) {
-				if (fCachedTextViewer != null && fAnnotationAccess != null)
+				if (fCachedTextViewer != null)
 					doubleBufferPaint(event.gc);
 			}
 		});
@@ -222,6 +256,9 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 			fBuffer.dispose();
 			fBuffer= null;
 		}
+		
+		fAnnotationTypes.clear();
+		fAnnotationAccess= null;
 	}
 	
 	/**
@@ -356,6 +393,9 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 				AnnotationPresentation presentation= getAnnotationPresentation(annotation);
 				if (presentation == null)
 					continue;
+
+				if (fAnnotationAccess != null && skip(fAnnotationAccess.getType(annotation)))
+					continue;
 				
 				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
@@ -439,6 +479,9 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 				if (presentation == null)
 					continue;
 
+				if (fAnnotationAccess != null && skip(fAnnotationAccess.getType(annotation)))
+					continue;
+
 				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
 				if (lay != layer)	// wrong layer: skip annotation
@@ -495,7 +538,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 * @see IVerticalRulerColumn#redraw()
 	 */
 	public void redraw() {
-		if (fCanvas != null && !fCanvas.isDisposed() && fAnnotationAccess != null) {
+		if (fCanvas != null && !fCanvas.isDisposed()) {
 			GC gc= new GC(fCanvas);
 			doubleBufferPaint(gc);
 			gc.dispose();
@@ -542,5 +585,43 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 */
 	protected IAnnotationModel getModel() {
 		return fModel;
+	}
+	
+	/**
+	 * Adds the given annotation type to this annotation ruler column. Starting
+	 * with this call, annotations of the given type are shown in this annotation
+	 * ruler column.
+	 * 
+	 * @param annotationType the annotation type
+	 * @since 3.0
+	 */
+	public void addAnnotationType(Object annotationType) {
+		fAnnotationTypes.add(annotationType);
+	}
+	
+	/**
+	 * Removes the given annotation type from this annotation ruler column.
+	 * Annotations of the given type are no longer shown in this annotation
+	 * ruler column.
+	 * 
+	 * @param annotationType the annotation type
+	 * @since 3.0
+	 */
+	public void removeAnnotationType(Object annotationType) {
+		fAnnotationTypes.remove(annotationType);
+	}
+	
+	/**
+	 * Returns whether annotation of the given annotation type should be skipped
+	 * by the drawing routine.
+	 * 
+	 * @param annotationType the annotation type
+	 * @return <code>true</code> if annotation of the given type should be skipped
+	 * @since 3.0
+	 */
+	private boolean skip(Object annotationType) {
+		if (annotationType == null)
+			return false;
+		return !fAnnotationTypes.contains(annotationType);
 	}
 }

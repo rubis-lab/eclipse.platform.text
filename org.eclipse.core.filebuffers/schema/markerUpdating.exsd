@@ -3,65 +3,65 @@
 <schema targetNamespace="org.eclipse.core.filebuffers">
 <annotation>
       <appInfo>
-         <meta.schema plugin="org.eclipse.core.filebuffers" id="documentCreation" name="Document Creation"/>
+         <meta.schema plugin="org.eclipse.core.filebuffers" id="markerUpdating" name="%markerUpdatingPoint"/>
       </appInfo>
       <documentation>
-         This extension point is interesting for your if you want the file buffer manager to instantiate a specific document implementation for certain file extensions.
+         This extension point is used for registering marker update strategies with marker annotation models. A resource that is opened in a text editor is associated with a marker annotation model. For each marker attached to the resource this model manages a position that is updated with each change applied to the text in the editor. If the resource is saved, the text in the editor and the position managed for a marker are passed over to the registered marker update strategies. These strategies can then update the marker&apos;s attributes based on the text and the position. Marker update strategies are requested to implement the interface &lt;samp&gt;org.eclipse.ui.texteditor.IMarkerUpdater&lt;/samp&gt;. The update strategies can be registered either for a particular marker type or all marker types. The latter by omitting any marker type in the extension.
       </documentation>
    </annotation>
 
    <element name="extension">
       <complexType>
          <sequence>
-            <element ref="factory"/>
+            <element ref="updater"/>
          </sequence>
          <attribute name="point" type="string" use="required">
             <annotation>
                <documentation>
-                  
+                  a fully qualified identifier of the target extension point
                </documentation>
             </annotation>
          </attribute>
          <attribute name="id" type="string">
             <annotation>
                <documentation>
-                  
+                  an optional identifier of the extension instance
                </documentation>
             </annotation>
          </attribute>
          <attribute name="name" type="string">
             <annotation>
                <documentation>
-                  
+                  an optional name of the extension instance
                </documentation>
             </annotation>
          </attribute>
       </complexType>
    </element>
 
-   <element name="factory">
+   <element name="updater">
       <complexType>
+         <attribute name="id" type="string" use="required">
+            <annotation>
+               <documentation>
+                  the unique id of this updater
+               </documentation>
+            </annotation>
+         </attribute>
          <attribute name="class" type="string" use="required">
             <annotation>
                <documentation>
-                  
+                  the qualified name of the marker updater class
                </documentation>
                <appInfo>
                   <meta.attribute kind="java"/>
                </appInfo>
             </annotation>
          </attribute>
-         <attribute name="extensions" type="string" use="required">
+         <attribute name="markerType" type="string">
             <annotation>
                <documentation>
-                  
-               </documentation>
-            </annotation>
-         </attribute>
-         <attribute name="id" type="string" use="required">
-            <annotation>
-               <documentation>
-                  
+                  the name of the marker type
                </documentation>
             </annotation>
          </attribute>
@@ -73,7 +73,7 @@
          <meta.section type="since"/>
       </appInfo>
       <documentation>
-         3.0
+         [Enter the first release in which this extension point appears.]
       </documentation>
    </annotation>
 
@@ -109,12 +109,7 @@
          <meta.section type="copyright"/>
       </appInfo>
       <documentation>
-         &lt;p&gt;
-&lt;a href=&quot;hglegal.htm&quot;&gt;
- &lt;img SRC=&quot;ngibmcpy.gif&quot;
-   ALT=&quot;Copyright (c) 2000, 2003 IBM Corporation and others. All Rights Reserved.&quot;
-   BORDER=&quot;0&quot; height=&quot;14&quot; width=&quot;324&quot;&gt;&lt;/a&gt;
-&lt;/p&gt;
+         
       </documentation>
    </annotation>
 

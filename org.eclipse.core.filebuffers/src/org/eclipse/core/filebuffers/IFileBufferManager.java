@@ -33,6 +33,12 @@ public interface IFileBufferManager {
 	 * Connects the file at the given location to this manager. After that call
 	 * successfully completed it is guaranteed that each call to <code>getFileBuffer</code>
 	 * returns the same file buffer until <code>disconnect</code> is called.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location of the file to be connected
 	 * @param monitor the progress monitor
@@ -44,6 +50,12 @@ public interface IFileBufferManager {
 	 * Disconnects the file at the given location from this manager. After that
 	 * call successfully completed there is no guarantee that <code>getFileBuffer</code>
 	 * will return a valid file buffer.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location of the file to be disconnected
 	 * @param monitor the progress monitor
@@ -54,6 +66,12 @@ public interface IFileBufferManager {
 	/**
 	 * Returns the file buffer managed for the given location or <code>null</code>
 	 * if there is no such file buffer.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location
 	 * @return the file buffer managed for that location or <code>null</code>
@@ -73,15 +91,27 @@ public interface IFileBufferManager {
 	 * Requests that the synchronization context is used to synchronize the
 	 * given location with its file buffer. This call as no effect if there is
 	 * no file buffer managed for the given location.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location
 	 */
-	void requestSynchronizationContext(IPath path);
+	void requestSynchronizationContext(IPath location);
 
 	/**
 	 * No longer requests the synchronization context for the filebuffer for
 	 * the given location. This method has no effect if there is no file buffer
 	 * managed for this location.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location
 	 */

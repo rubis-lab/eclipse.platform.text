@@ -9,13 +9,14 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.core.internal.filebuffers.FileBuffersPlugin;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.CoreException;
@@ -32,8 +33,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
-
-import org.eclipse.ui.PlatformUI;
 
 
 /**
@@ -157,10 +156,10 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 	 */
 	protected void handleCoreException(CoreException exception, String message) {
 		
-		ILog log= Platform.getPlugin(PlatformUI.PLUGIN_ID).getLog();
+		ILog log= Platform.getPlugin(FileBuffersPlugin.PLUGIN_ID).getLog();
 		
 		if (message != null)
-			log.log(new Status(IStatus.ERROR, PlatformUI.PLUGIN_ID, 0, message, exception));
+			log.log(new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, 0, message, exception));
 		else
 			log.log(exception.getStatus());
 	}
@@ -235,7 +234,7 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 			catchupWithMarkers();
 		} catch (CoreException x) {
 			if (x.getStatus().getCode() != IResourceStatus.RESOURCE_NOT_FOUND)
-				handleCoreException(x, EditorMessages.getString("AbstractMarkerAnnotationModel.connected")); //$NON-NLS-1$
+				handleCoreException(x, "Could not catch up with markers.");
 		}
 
 		fireModelChanged();
@@ -251,7 +250,7 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 		fInstantiatedMarkerUpdaters= new ArrayList(2);
 		
 		// populate list
-		IExtensionPoint extensionPoint= Platform.getPluginRegistry().getExtensionPoint(PlatformUI.PLUGIN_ID, "markerUpdaters"); //$NON-NLS-1$
+		IExtensionPoint extensionPoint= Platform.getPluginRegistry().getExtensionPoint(FileBuffersPlugin.PLUGIN_ID, "markerUpdating"); //$NON-NLS-1$
 		if (extensionPoint != null) {
 			IConfigurationElement[] elements= extensionPoint.getConfigurationElements();
 			for (int i= 0; i < elements.length; i++)
@@ -344,7 +343,7 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 						deleteMarkers(m);
 						
 					} catch (CoreException x) {
-						handleCoreException(x, EditorMessages.getString("AbstractMarkerAnnotationModel.removeAnnotations")); //$NON-NLS-1$
+						handleCoreException(x, "Markers could not be deleted.");
 					}
 					listenToMarkerChanges(true);
 				
@@ -423,7 +422,7 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 		try {
 			return (IMarkerUpdater) element.createExecutableExtension("class"); //$NON-NLS-1$
 		} catch (CoreException x) {
-			handleCoreException(x, EditorMessages.getString("AbstractMarkerAnnotationModel.createMarkerUpdater")); //$NON-NLS-1$
+			handleCoreException(x, "Class could not be created.");
 		}
 		
 		return null;

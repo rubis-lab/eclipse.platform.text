@@ -740,7 +740,11 @@ public class TextViewer extends Viewer implements
 		 * @see IFindReplaceTarget#findAndSelect(int, String, boolean, boolean, boolean)
 		 */
 		public int findAndSelect(int offset, String findString, boolean searchForward, boolean caseSensitive, boolean wholeWord) {
-			return findAndSelect(offset, findString, searchForward, caseSensitive, wholeWord, false);
+			try {
+				return findAndSelect(offset, findString, searchForward, caseSensitive, wholeWord, false);
+			} catch (PatternSyntaxException ex) {
+				return -1;
+			}
 		}
 		
 		/*
@@ -1278,6 +1282,11 @@ public class TextViewer extends Viewer implements
 	 * @since 3.0
 	 */
 	protected String fPartitioning;
+	/**
+	 * All registered text presentation listeners.
+	 * since 3.0
+	 */
+	protected List fTextPresentationListeners;
 	
 	
 	
@@ -3022,6 +3031,8 @@ public class TextViewer extends Viewer implements
 		} catch (BadLocationException x) {
 			throw new IllegalArgumentException(JFaceTextMessages.getString("TextViewer.error.invalid_visible_region_2")); //$NON-NLS-1$
 		}
+		
+		getPaintManager().paint(IPainter.INTERNAL);
 	}
 				
 	/*
@@ -3037,6 +3048,7 @@ public class TextViewer extends Viewer implements
 				manager.freeSlaveDocument(slave);
 			}
 		}
+		getPaintManager().paint(IPainter.INTERNAL);
 	}
 	
 	
@@ -3997,12 +4009,25 @@ public class TextViewer extends Viewer implements
 					
 		if (controlRedraw)
 			fTextWidget.setRedraw(false);
+
+		/*
+		 * Call registered text presentation listeners
+		 * and let them apply their presentation.
+		 */
+		if (fTextPresentationListeners != null) {
+			IRegion region= presentation.getCoverage();
+			ArrayList listeners= new ArrayList(fTextPresentationListeners);
+			for (int i= 0, size= listeners.size(); i < size; i++) {
+				ITextPresentationListener listener= (ITextPresentationListener)listeners.get(i);
+				listener.applyTextPresentation(presentation, region);
+			}
+		}
 		
 		if (fReplaceTextPresentation)
 			applyTextPresentation(presentation);
 		else
 			addPresentation(presentation);
-		
+
 		if (controlRedraw)
 			fTextWidget.setRedraw(true);
 	}
@@ -4249,6 +4274,8 @@ public class TextViewer extends Viewer implements
 		
 		if (fTextWidget != null && !fTextWidget.isDisposed())
 			fTextWidget.setRedraw(false);
+		
+		fireRedrawChanged();
 	}
 	
 	/*
@@ -4655,5 +4682,37 @@ public class TextViewer extends Viewer implements
 	 */
 	protected String getDocumentPartitioning() {
 		return fPartitioning;
+	}
+
+	//---- Text presentation listeners ----
+	
+	/*
+	 * @see ITextViewerExtension4#addTextPresentationListener(ITextPresentationListener)
+	 * @since 3.0
+	 */
+	public void addTextPresentationListener(ITextPresentationListener listener) {
+		
+		Assert.isNotNull(listener);
+
+		if (fTextPresentationListeners == null)
+			fTextPresentationListeners= new ArrayList();
+		
+		if (!fTextPresentationListeners.contains(listener))
+			fTextPresentationListeners.add(listener);
+	}
+	
+	/*
+	 * @see ITextViewerExtension4#removeTextPresentationListener(ITextPresentationListener)
+	 * @since 3.0
+	 */
+	public void removeTextPresentationListener(ITextPresentationListener listener) {
+
+		Assert.isNotNull(listener);
+
+		if (fTextPresentationListeners != null) {
+			fTextPresentationListeners.remove(listener);
+			if (fTextPresentationListeners.size() == 0)
+				fTextPresentationListeners= null;
+		}
 	}
 }

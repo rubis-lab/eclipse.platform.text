@@ -19,6 +19,40 @@ To see which bugs have been addressed in one of the builds simply open the <a hr
 <br>
 <br>
 <br>
+========== Eclipse Build Input October 28th 2003 ==========<br>
+<pre>
+- Vertical ruler annotations can be disabled via editor's Annotation preference
+  page.
+- Added support to set background for annotations
+	- annotation background painter <work in progress>
+	- key/value attributes to "org.eclipse.ui.workbench.texteditor.markerAnnotationSpecification" extension-point
+	- updated annotation preference page to show this attribute
+	- enabled this feature for Search annotations
+</pre>
+<br>
+<br>
+========== Eclipse Build Input October 21th 2003 ==========<br>
+<pre>
+- Incremental find has its own editor status line field (findField)
+- IStatusField has been extended (IStatusFieldExtension) with the following concepts:
+  - set error text and image
+  - set tool tip
+  - control visibility
+</pre>
+<br>
+<br>
+========== Eclipse Build Input October 7th 2003 ==========<br>
+<pre>
+- Find/Replace dialog now offers content assist for regular expression search and replace
+- Changes found by Quickdiff are now ordinary annotations. I.e. they can serve as
+  navigation target, can be shown in the overview ruler, and in the text. Their presentation
+  colors can also be configured.
+- "Open External File" can be found in the Files menu. It opens files which are not workspace files
+  with the associated editor or the default text editor if no editor is specified. Text editors support
+  external files.
+</pre>
+<br>
+<br>
 ========== Eclipse Build Input September 30th 2003 ==========<br>
 <pre>
 - Find/Replace dialog now supports regular expression search and replace

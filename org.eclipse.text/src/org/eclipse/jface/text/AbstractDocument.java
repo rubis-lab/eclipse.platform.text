@@ -40,8 +40,32 @@ import java.util.regex.PatternSyntaxException;
  * @see ITextStore
  * @see ILineTracker
  */
-public abstract class AbstractDocument implements IDocument, IDocumentExtension, IDocumentExtension2, IDocumentExtension3 {
+public abstract class AbstractDocument implements IDocument, IDocumentExtension, IDocumentExtension2, IDocumentExtension3, IRepairableDocument {
+	
+	/**
+	 * Inner class to bundle a registered post notification replace operation together with its
+	 * owner.
+	 * 
+	 * @since 2.0
+	 */
+	static private class RegisteredReplace {
+		/** The owner of this replace operation. */
+		IDocumentListener fOwner;
+		/** The replace operation */
+		IDocumentExtension.IReplace fReplace;
 		
+		/**
+		 * Creates a new bundle object.
+		 * @param owner the document listener owning the replace operation
+		 * @param replace the replace operation
+		 */
+		RegisteredReplace(IDocumentListener owner, IDocumentExtension.IReplace replace) {
+			fOwner= owner;
+			fReplace= replace;
+		}
+	}
+	
+	
 	/** The document's text store */
 	private ITextStore   fStore;
 	/** The document's line tracker */
@@ -56,7 +80,6 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 	private Map fPositions;
 	/** All registered document position updaters */
 	private List fPositionUpdaters;
-	
 	/** 
 	 * The list of post notification changes
 	 * @since 2.0
@@ -93,7 +116,6 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 	 * @since 3.0
 	 */
 	private Map fDocumentPartitioners;
-	
 	/**
 	 * The partitioning changed event.
 	 * @since 3.0
@@ -1003,7 +1025,11 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 	 */
 	public int search(int startPosition, String findString, boolean forwardSearch, boolean caseSensitive, boolean wholeWord) throws BadLocationException {
 		try {
-			return getFindReplaceDocumentAdapter().search(startPosition, findString, forwardSearch, caseSensitive, wholeWord, false).getOffset();	
+			IRegion region= getFindReplaceDocumentAdapter().search(startPosition, findString, forwardSearch, caseSensitive, wholeWord, false);
+			if (region == null)
+				return -1;
+			else
+				return region.getOffset();	
 		} catch (IllegalStateException ex) {
 			return -1;
 		} catch (PatternSyntaxException ex) {
@@ -1025,30 +1051,7 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 	}
 	
 	/**
-	 * Inner class to bundle a registered post notifcation replace operation together with its
-	 * owner.
-	 * 
-	 * @since 2.0
-	 */
-	static private class RegisteredReplace {
-		/** The owner of this replace operation. */
-		IDocumentListener fOwner;
-		/** The replace operation */
-		IDocumentExtension.IReplace fReplace;
-		
-		/**
-		 * Creates a new bundle object.
-		 * @param owner the document listener owning the replace operation
-		 * @param replace the replace operation
-		 */
-		RegisteredReplace(IDocumentListener owner, IDocumentExtension.IReplace replace) {
-			fOwner= owner;
-			fReplace= replace;
-		}
-	}
-	
-	/**
-	 * Flushs all registered post notification changes.
+	 * Flushes all registered post notification changes.
 	 * 
 	 * @since 2.0
 	 */
@@ -1160,7 +1163,7 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 	}
 	
 	/**
-	 * Resumes the document listern notification by sending out the remembered
+	 * Resumes the document listener notification by sending out the remembered
 	 * partition changed and document event.
 	 * 
 	 * @since 2.1
@@ -1270,5 +1273,13 @@ public abstract class AbstractDocument implements IDocument, IDocumentExtension,
 		DocumentPartitioningChangedEvent event= new DocumentPartitioningChangedEvent(this);
 		event.setPartitionChange(partitioning, 0, getLength());
 		fireDocumentPartitioningChanged(event);
+	}
+	
+	/*
+	 * @see org.eclipse.jface.text.IRepairableDocument#repairLineInformation()
+	 * @since 3.0
+	 */
+	public void repairLineInformation() {
+		getTracker().set(get());
 	}
 }

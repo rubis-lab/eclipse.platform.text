@@ -8,7 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 
@@ -23,7 +23,7 @@ import org.eclipse.core.resources.IMarker;
  * Updates a marker's positional attributes which are 
  * start position, end position, and line number.
  */
-public final class BasicMarkerUpdater implements IMarkerUpdater {
+public final class DefaultMarkerUpdater implements IMarkerUpdater {
 	
 	private final static String[] ATTRIBUTES= {
 		IMarker.CHAR_START,
@@ -34,7 +34,7 @@ public final class BasicMarkerUpdater implements IMarkerUpdater {
 	/**
 	 * Creates a new basic marker updater.
 	 */
-	public BasicMarkerUpdater() {
+	public DefaultMarkerUpdater() {
 		super();
 	}
 		

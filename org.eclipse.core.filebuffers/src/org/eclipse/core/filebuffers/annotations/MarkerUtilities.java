@@ -9,19 +9,18 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 import java.util.Map;
 
+import org.eclipse.core.internal.filebuffers.FileBuffersPlugin;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Platform;
-
-import org.eclipse.ui.PlatformUI;
 
 
 
@@ -105,7 +104,7 @@ public final class MarkerUtilities {
 	 * Handles a core exception which occurs when accessing marker attributes.
 	 */
 	private static void handleCoreException(CoreException e) {
-		Platform.getPlugin(PlatformUI.PLUGIN_ID).getLog().log(e.getStatus());
+		Platform.getPlugin(FileBuffersPlugin.PLUGIN_ID).getLog().log(e.getStatus());
 	}
 	
 	/**

@@ -27,6 +27,12 @@ public interface ITextFileBufferManager extends IFileBufferManager {
 	/**
 	 * Returns the text file buffer managed for the file at the given location
 	 * or <code>null</code> if either there is no such text file buffer.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location
 	 * @return the text file buffer managed for that location or <code>null</code>
@@ -42,11 +48,25 @@ public interface ITextFileBufferManager extends IFileBufferManager {
 	String getDefaultEncoding();
 	
 	/**
-	 * Creates a new empty document . The document is set up in the same way as it would
-	 * be used in a text file buffer for a file at the given location.
+	 * Creates a new empty document . The document is set up in the same way as
+	 * it would be used in a text file buffer for a file at the given location.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system. The file buffer manager does
+	 * not resolve the location of workspace resources in the case of linked
+	 * resources.
+	 * </p>
 	 * 
 	 * @param location the location used to set up the newly created document
 	 * @return a new empty document
 	 */
 	IDocument createEmptyDocument(IPath location);
+	
+	/**
+	 * Returns the key for the default annotation model for the text file
+	 * buffers managed by this file buffer manager.
+	 * 
+	 * @return the key for the default annotation model or <code>null</code>
+	 */
+	Object getDefaultAnnotationModelKey();
 }

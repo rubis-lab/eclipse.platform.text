@@ -28,6 +28,8 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
+import org.eclipse.core.filebuffers.FileBuffers;
+
 
 public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 	
@@ -52,17 +54,25 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 			 */
 			protected void execute() throws Exception {
 			}
+			
+			/**
+			 * Does everything necessary prior to execution.
+			 */
+			public void preRun() {
+				fManager.fireStateChanging(ResourceFileBuffer.this);
+			}
 				
 			/*
 			 * @see java.lang.Runnable#run()
 			 */
 			public void run() {
 				
-				if (isDisposed())
+				if (isDisposed()) {
+					fManager.fireStateChangeFailed(ResourceFileBuffer.this);
 					return;
-					
+				}
+				
 				try {
-					fManager.fireStateChanging(ResourceFileBuffer.this);
 					execute();
 				} catch (Exception x) {
 					FileBuffersPlugin.getDefault().getLog().log(new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, IStatus.OK, "Exception when synchronizing", x)); //$NON-NLS-1$
@@ -155,8 +165,10 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 							break;
 					}
 						
-					if (fileChange != null)
+					if (fileChange != null) {
+						fileChange.preRun();
 						fManager.execute(fileChange, fSynchronizationContextCount > 0);
+					}
 				}
 					
 				return true; // because we are sitting on files anyway
@@ -165,6 +177,8 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 		
 		
 		
+	/** The location */
+	protected IPath fLocation;
 	/** The element for which the info is stored */
 	protected IFile fFile;
 	/** How often the element has been connected */
@@ -203,10 +217,11 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 	abstract protected void commitFileBufferContent(IProgressMonitor monitor, boolean overwrite) throws CoreException;
 	
 	public void create(IPath location, IProgressMonitor monitor) throws CoreException {
-		IFile file= fManager.getWorkspaceFileAtLocation(location);
+		IFile file= FileBuffers.getWorkspaceFileAtLocation(location);
 		if (file == null || !file.exists())
 			throw new CoreException(new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, IStatus.OK, "File does not exist", null));
 		
+		fLocation= location;
 		fFile= file;
 		fFileSynchronizer= new FileSynchronizer();
 		
@@ -245,7 +260,7 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 	 * @see org.eclipse.core.filebuffers.IFileBuffer#getLocation()
 	 */
 	public IPath getLocation() {
-		return fFile.getLocation();
+		return fLocation;
 	}
 
 	/*
@@ -307,6 +322,16 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 	public boolean isStateValidated() {
 		return fIsStateValidated;
 	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.IFileBuffer#resetStateValidation()
+	 */
+	public void resetStateValidation() {
+		if (fIsStateValidated) {
+			fIsStateValidated= false;
+			fManager.fireStateValidationChanged(this, fIsStateValidated);
+		}
+	}
 
 	/**
 	 * Sends out the notification that the file serving as document input has been moved.
@@ -359,11 +384,10 @@ public abstract class ResourceFileBuffer extends AbstractFileBuffer {
 	 * @see org.eclipse.core.filebuffers.IFileBuffer#getModifcationStamp()
 	 */
 	public long getModifcationStamp() {
-		IPath path= fFile.getLocation();
-		File file= path.toFile();
+		File file= FileBuffers.getSystemFileAtLocation(getLocation());
 		if (file != null)
 			return file.lastModified();
-		return IFile.NULL_STAMP;
+		return IResource.NULL_STAMP;
 	}
 	
 	/**

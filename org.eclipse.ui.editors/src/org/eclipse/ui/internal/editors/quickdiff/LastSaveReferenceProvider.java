@@ -19,6 +19,8 @@ import java.io.Reader;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.jobs.IJobManager;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
@@ -48,13 +50,17 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	private IDocumentProvider fDocumentProvider;
 	/** The current editor input. */
 	private IEditorInput fEditorInput;
+	/** Private lock noone else will synchronize on. */
+	private final Object fLock= new Object();
+	/** The progress monitor for a currently running <code>getReference</code> operation, or <code>null</code>. */
+	private IProgressMonitor fProgressMonitor;
 
 	/*
 	 * @see org.eclipse.ui.editors.quickdiff.IQuickDiffReferenceProvider#getReference()
 	 */
 	public IDocument getReference(IProgressMonitor monitor) {
 		if (!fDocumentRead)
-			readDocument();
+			readDocument(monitor);
 		return fReference;
 	}
 
@@ -62,13 +68,22 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	 * @see org.eclipse.ui.editors.quickdiff.IQuickDiffReferenceProvider#dispose()
 	 */
 	public void dispose() {
-		if (fDocumentProvider != null)
-			fDocumentProvider.removeElementStateListener(this);
+		IDocumentProvider provider= fDocumentProvider;
+		if (provider != null)
+			provider.removeElementStateListener(this);
 		
-		fEditorInput= null;
-		fDocumentProvider= null;
-		fReference= null;
-		fDocumentRead= false;
+		IProgressMonitor monitor= fProgressMonitor;
+		if (monitor != null) {
+			monitor.setCanceled(true);
+		}
+		
+		synchronized (fLock) {
+			fEditorInput= null;
+			fDocumentProvider= null;
+			fReference= null;
+			fDocumentRead= false;
+			fProgressMonitor= null;
+		}
 	}
 
 	/*
@@ -94,8 +109,10 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 		// note that they may serve multiple editors	
 		if (provider != fDocumentProvider || input != fEditorInput) {
 			dispose();
-			fDocumentProvider= provider;
-			fEditorInput= input;
+			synchronized (fLock) {
+				fDocumentProvider= provider;
+				fEditorInput= input;
+			}
 		}
 	}
 
@@ -115,46 +132,78 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 
 	/**
 	 * Reads in the saved document into <code>fReference</code>.
+	 * 
+	 * @param monitor a progress monitor, or <code>null</code>
 	 */
-	private void readDocument() {
+	private void readDocument(IProgressMonitor monitor) {
 		
-		if (fDocumentProvider instanceof IStorageDocumentProvider && fEditorInput instanceof IFileEditorInput) {
+		// protect against concurrent disposal
+		IDocumentProvider prov= fDocumentProvider;
+		IEditorInput inp= fEditorInput;
+		IDocument doc= fReference;
+		
+		if (prov instanceof IStorageDocumentProvider && inp instanceof IFileEditorInput) {
 			
-			IFileEditorInput input= (IFileEditorInput) fEditorInput;
-			IStorageDocumentProvider provider= (IStorageDocumentProvider) fDocumentProvider;
+			IFileEditorInput input= (IFileEditorInput) inp;
+			IStorageDocumentProvider provider= (IStorageDocumentProvider) prov;
 			
-			if (fReference == null)
-				fReference= new Document();
+			if (doc == null)
+				doc= new Document();
 	
 			// addElementStateListener adds at most once - no problem to call repeatedly
 			((IDocumentProvider)provider).addElementStateListener(this);
 			
-			InputStream stream= getFileContents(input);
-			if (stream == null)
-				return;
-			
-			String encoding= getEncoding(input, provider);
+			IJobManager jobMgr= Platform.getJobManager();
+			IFile file= input.getFile();
 			
 			try {
-				setDocumentContent(fReference, stream, encoding);
-				fDocumentRead= true;
+				fProgressMonitor= monitor;
+				jobMgr.beginRule(file, monitor);
+				
+				InputStream stream= getFileContents(file);
+				if (stream == null)
+					return;
+				
+				String encoding= getEncoding(input, provider);
+				if (encoding == null)
+					return;
+				
+				setDocumentContent(doc, stream, encoding, monitor);
+				
 			} catch (IOException e) {
 				return;
+			} finally {
+				jobMgr.endRule(file);
+				fProgressMonitor= null;
+			}
+			
+			if (monitor != null && monitor.isCanceled())
+				return;
+			
+			
+			// update state
+			synchronized (fLock) {
+				if (fDocumentProvider == provider && fEditorInput == input) { 
+					// only update state if our provider / input pair has not been updated in between (dispose or setActiveEditor) 
+					fReference= doc;
+					fDocumentRead= true;
+				}
 			}
 			
 		}
 	}
 
+	/* utility methods */
+	
 	/**
-	 * Gets the contents of the file referred to by <code>input</code> as an input stream.
+	 * Gets the contents of <code>file</code> as an input stream.
 	 * 
-	 * @param input the <code>IFileEditorInput</code> which we want the content for
+	 * @param file the <code>IFile</code> which we want the content for
 	 * @return an input stream for the file's content
 	 */
-	private InputStream getFileContents(IFileEditorInput input) {
+	private static InputStream getFileContents(IFile file) {
 		InputStream stream= null;
 		try {
-			IFile file= input.getFile();
 			if (file != null)
 				stream= file.getContents();
 				
@@ -172,7 +221,7 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	 * @param provider the current document provider
 	 * @return the encoding for the file corresponding to <code>input</code>, or the default encoding
 	 */
-	private String getEncoding(IFileEditorInput input, IStorageDocumentProvider provider) {
+	private static String getEncoding(IFileEditorInput input, IStorageDocumentProvider provider) {
 		String encoding= provider.getEncoding(input);
 		if (encoding == null)
 			encoding= provider.getDefaultEncoding();
@@ -185,9 +234,10 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	 * @param document the document to be initialized
 	 * @param contentStream the stream which delivers the document content
 	 * @param encoding the character encoding for reading the given stream
-	 * @exception CoreException if the given stream can not be read
+	 * @param monitor a progress monitor for cancellation, or <code>null</code>
+	 * @exception IOException if the given stream can not be read
 	 */
-	private static void setDocumentContent(IDocument document, InputStream contentStream, String encoding) throws IOException {
+	private static void setDocumentContent(IDocument document, InputStream contentStream, String encoding, IProgressMonitor monitor) throws IOException {
 		Reader in= null;
 		try {
 			final int DEFAULT_FILE_SIZE= 15 * 1024;
@@ -197,6 +247,9 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 			char[] readBuffer= new char[2048];
 			int n= in.read(readBuffer);
 			while (n > 0) {
+				if (monitor != null && monitor.isCanceled())
+					return;
+				
 				buffer.append(readBuffer, 0, n);
 				n= in.read(readBuffer);
 			}
@@ -219,7 +272,7 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	public void elementDirtyStateChanged(Object element, boolean isDirty) {
 		if (!isDirty && element == fEditorInput) {
 			// document has been saved or reverted - recreate reference
-			readDocument();
+			readDocument(null);
 		}
 	}
 
@@ -235,7 +288,7 @@ public class LastSaveReferenceProvider implements IQuickDiffProviderImplementati
 	public void elementContentReplaced(Object element) {
 		if (element == fEditorInput) {
 			// document has been reverted or replaced
-			readDocument();
+			readDocument(null);
 		}
 	}
 

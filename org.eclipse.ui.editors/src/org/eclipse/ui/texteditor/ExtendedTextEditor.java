@@ -174,7 +174,9 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	public ExtendedTextEditor() {
 		super();
 		fAnnotationPreferences= new MarkerAnnotationPreferences();
-		setRangeIndicator(new DefaultRangeIndicator());
+		Annotation rangeIndicator= new Annotation();
+		rangeIndicator.setAnnotationAdapter(AnnotationPresentation.class, new DefaultRangeIndicatorPresentation());
+		setRangeIndicator(rangeIndicator);
 		initializeKeyBindingScopes();
 		initializeEditor();
 	}
@@ -690,7 +692,9 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 */
 	protected CompositeRuler createCompositeRuler() {
 		CompositeRuler ruler= new CompositeRuler();
-		ruler.addDecorator(0, new AnnotationRulerColumn(VERTICAL_RULER_WIDTH, getAnnotationAccess()));
+		AnnotationRulerColumn column= new AnnotationRulerColumn(VERTICAL_RULER_WIDTH);
+		column.setAnnotationAccess(getAnnotationAccess());
+		ruler.addDecorator(0, column);
 		
 		if (isLineNumberRulerVisible())
 			ruler.addDecorator(1, createLineNumberRulerColumn());
@@ -976,6 +980,8 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	public Object getAdapter(Class adapter) {
 		if (IGotoMarker.class.equals(adapter))
 			return fGotoMarkerAdapter;
+		if (IAnnotationAccess.class.equals(required))
+			return getAnnotationAccess();
 		return super.getAdapter(adapter);
 	}
 	

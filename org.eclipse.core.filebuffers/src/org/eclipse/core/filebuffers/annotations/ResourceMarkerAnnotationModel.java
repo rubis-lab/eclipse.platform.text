@@ -9,7 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 import org.eclipse.core.resources.IMarker;

@@ -8,7 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-package org.eclipse.ui.texteditor;
+package org.eclipse.core.filebuffers.annotations;
 
 
 
@@ -39,7 +39,7 @@ public interface IMarkerUpdater {
 	/**
 	 * Returns the attributes for which this updater is responsible. If the
 	 * result is <code>null</code>, the updater assumes responsibility for
-	 * any attributes.
+	 * any attribute.
 	 *
 	 * @return the attributes or <code>null</code> for any attribute
 	 */

@@ -61,6 +61,11 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 			AnnotationModel.this.fireModelChanged();
 		}
 	};
+	/**
+	 * The current annotation model event.
+	 * @since 3.0
+	 */
+	private AnnotationModelEvent fModelEvent= new AnnotationModelEvent(this);
 
 	/**
 	 * Creates a new annotation model. The annotation is empty, i.e. does not
@@ -92,6 +97,53 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 		}
 	}
 
+	/*
+	 * @see IAnnotationModelExtension#replaceAnnotations(Annotation[], Map)
+	 * @since 3.0
+	 */
+	public void replaceAnnotations(Annotation[] annotationsToRemove, Map annotationsToAdd) {
+		
+		boolean modelChanged= true;
+		
+		if (annotationsToRemove != null) {
+			for (int i= 0, length= annotationsToRemove.length; i < length; i++) {
+				Annotation annotation= annotationsToRemove[i];
+				if (fAnnotations.containsKey(annotation)) {
+				
+					if (fDocument != null) {
+						Position p= (Position) fAnnotations.get(annotation);
+						fDocument.removePosition(p);
+					}
+					
+					fAnnotations.remove(annotation);
+					
+					modelChanged= true;
+				}
+			}
+		}
+		
+		if (annotationsToAdd != null) {
+			Iterator iter= annotationsToAdd.entrySet().iterator();
+			while (iter.hasNext()) {
+				try {
+					Map.Entry mapEntry= (Map.Entry)iter.next();
+					Annotation annotation= (Annotation)mapEntry.getKey();
+					if (!fAnnotations.containsKey(annotation)) {
+						Position position= (Position)mapEntry.getValue();
+						addPosition(fDocument, position);
+						fAnnotations.put(annotation, position);
+						modelChanged= true;
+					}
+				} catch (BadLocationException e) {
+					// ignore invalid position
+				}
+			}
+		}
+		
+		if (modelChanged)
+			fireModelChanged();
+	}
+	
 	/**
 	 * Adds the given annotation to this model. Associates the 
 	 * annotation with the given position. If requested, all annotation
@@ -108,6 +160,7 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 			
 			addPosition(fDocument, position);
 			fAnnotations.put(annotation, position);
+			fModelEvent.annotationAdded(annotation);
 
 			if (fireModelChanged)
 				fireModelChanged();
@@ -364,10 +417,12 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 	 */
 	public Position getPosition(Annotation annotation) {
 		Position position= (Position) fAnnotations.get(annotation);
+		if (position != null)
+			return position;
+		
 		Iterator it= fAttachments.values().iterator();
 		while (position == null && it.hasNext())
-			position= ((IAnnotationModel)it.next()).getPosition(annotation);
-			
+			position= ((IAnnotationModel)it.next()).getPosition(annotation);	
 		return position;
 	}
 	
@@ -388,10 +443,12 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 	protected void removeAllAnnotations(boolean fireModelChanged) {
 		
 		if (fDocument != null) {
-			Iterator e= fAnnotations.values().iterator();
+			Iterator e= fAnnotations.keySet().iterator();
 			while (e.hasNext()) {
-				Position p= (Position) e.next();
+				Annotation a= (Annotation) e.next();
+				Position p= (Position) fAnnotations.get(a);
 				fDocument.removePosition(p);
+				fModelEvent.annotationRemoved(a);
 			}
 		}
 		
@@ -424,9 +481,55 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 			}
 				
 			fAnnotations.remove(annotation);
+			fModelEvent.annotationRemoved(annotation);
 			
 			if (fireModelChanged)
 				fireModelChanged();
+		}
+	}
+	
+	/**
+	 * Modifies the position associated with the given annotation to the given position.
+	 * If the annotation is not yet managed by this annotation model, the annotation
+	 * is added. All annotation model change listeners will be informed about the change.
+	 *
+	 * @param annotation the annotation whose associated position should be modified
+	 * @param position the position to whose values the associated position should be changed
+	 */
+	public void modifyAnnotation(Annotation annotation, Position position) {
+		modifyAnnotation(annotation, position, true);
+	}
+	
+	/**
+	 * Modifies the associated position of the given annotation to the given position.
+	 * If the annotation is not yet managed by this annotation model, the annotation
+	 * is added. If requested, all annotation model change listeners will be informed 
+	 * about the change.
+	 *
+	 * @param annotation the annotation whose associated position should be modified
+	 * @param position the position to whose values the associated position should be changed
+	 * @param fireModelChanged indicates whether to notify all model listeners	 
+	 */
+	protected void modifyAnnotation(Annotation annotation, Position position, boolean fireModelChanged) {
+		if (position == null) {
+			removeAnnotation(annotation, fireModelChanged);
+		} else {
+			Position p= (Position) fAnnotations.get(annotation);
+			if (p != null) {
+				if (position.getOffset() != p.getOffset() && position.getLength() != p.getLength()) {
+					p.setOffset(position.getOffset());
+					p.setLength(position.getLength());
+					fModelEvent.annotationChanged(annotation);
+					if (fireModelChanged)
+						fireModelChanged();
+				}
+			} else {
+				try {
+					addAnnotation(annotation, position, fireModelChanged);
+				} catch (BadLocationException e) {
+					// ignore invalid position
+				}
+			}
 		}
 	}
 	

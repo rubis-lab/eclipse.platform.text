@@ -16,10 +16,12 @@ import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.IAnnotationAccessExtension;
+import org.eclipse.jface.text.source.IAnnotationAdapter;
 
-import org.eclipse.ui.internal.editors.text.EditorsPlugin;
+import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
 
 
 /**
@@ -138,6 +140,24 @@ public class DefaultMarkerAnnotationAccess implements IAnnotationAccess, IAnnota
 		}
 		if (preference != null)
 			return preference.getPreferenceLabel();
+		
+		return null;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAccessExtension#getAnnotationPresentation(org.eclipse.jface.text.source.Annotation)
+	 */
+	public AnnotationPresentation getAnnotationPresentation(Annotation annotation) {
+		IAnnotationAdapter adapter= annotation.getAnnotationAdapter(AnnotationPresentation.class);
+		if (adapter instanceof IAnnotationAdapter)
+			return (AnnotationPresentation) adapter;
+		
+		if (annotation instanceof MarkerAnnotation){
+			MarkerAnnotation m= (MarkerAnnotation) annotation;
+			AnnotationPresentation presentation= new MarkerAnnotationPresentation(m);
+			annotation.setAnnotationAdapter(AnnotationPresentation.class, presentation);
+			return presentation;
+		}
 		
 		return null;
 	}

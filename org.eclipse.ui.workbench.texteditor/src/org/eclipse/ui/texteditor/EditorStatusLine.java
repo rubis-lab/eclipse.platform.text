@@ -35,7 +35,8 @@ class EditorStatusLine implements IEditorStatusLine {
 		 * @see ISelectionChangedListener#selectionChanged(org.eclipse.jface.viewers.SelectionChangedEvent)
 		 */
 		public void selectionChanged(SelectionChangedEvent event) {
-			fStatusLineManager.setErrorMessage(null);
+			fStatusLineManager.setErrorMessage(null, null);
+			fStatusLineManager.setMessage(null, null);
 
 			Assert.isTrue(this == fStatusLineClearer);
 			uninstallStatusLineClearer();
@@ -84,8 +85,12 @@ class EditorStatusLine implements IEditorStatusLine {
 
 		if (error)
 			fStatusLineManager.setErrorMessage(image, message);
-		else
+		else {
+			// Clear error message
+			fStatusLineManager.setErrorMessage(null, null);
+
 			fStatusLineManager.setMessage(image, message);
+		}
 
 		if (isMessageEmpty(message))
 			uninstallStatusLineClearer();			

@@ -17,7 +17,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
-import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.CoreException;
@@ -26,6 +25,10 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubProgressMonitor;
+
+import org.eclipse.core.filebuffers.IAnnotationModelManager;
+import org.eclipse.core.filebuffers.ITextFileBuffer;
+import org.eclipse.core.filebuffers.annotations.ResourceMarkerAnnotationModel;
 
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -84,6 +87,8 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 	protected String fEncoding;
 	/** Internal document listener */
 	protected IDocumentListener fDocumentListener= new DocumentListener();
+	/** The annotation model manager */
+	protected IAnnotationModelManager fAnnotationModelManager;
 
 
 
@@ -160,6 +165,8 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 				fDocument.set(original.get());
 			}
 			
+			revertAnnotationModels();
+			
 			if (fCanBeSaved) {
 				fCanBeSaved= false;
 				addFileBufferContentListeners();
@@ -225,13 +232,11 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 				fFile.setContents(stream, overwrite, true, monitor);
 				// set synchronization stamp to know whether the file synchronizer must become active
 				fSynchronizationStamp= fFile.getModificationStamp();
-				
-				// TODO if there is an annotation model update it here
-				
+								
 			} else {
 
 				try {
-					monitor.beginTask("Saving", 2000); //$NON-NLS-1$
+					monitor.beginTask("Saving", 2000);
 					ContainerGenerator generator = new ContainerGenerator(fFile.getWorkspace(), fFile.getParent().getFullPath());
 					generator.generateContainer(new SubProgressMonitor(monitor, 1000));
 					fFile.create(stream, false, new SubProgressMonitor(monitor, 1000));
@@ -240,6 +245,8 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 					monitor.done();
 				}
 			}
+			
+			commitAnnotationModels();
 			
 		} catch (IOException x) {
 			IStatus s= new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, IStatus.OK, x.getMessage(), x);
@@ -342,5 +349,48 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 			Status status= new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, IResourceStatus.OUT_OF_SYNC_LOCAL, "out of sync", null); 
 			throw new CoreException(status);
 		}
+	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.ITextFileBuffer#getAnnotationModelManager()
+	 */
+	public IAnnotationModelManager getAnnotationModelManager() {
+		return fAnnotationModelManager;
+	}
+		
+	/*
+	 * @see org.eclipse.core.internal.filebuffers.ResourceFileBuffer#connect()
+	 */
+	public void connect() {
+		super.connect();
+		if (fReferenceCount == 1) {
+			fAnnotationModelManager= new AnnotationModelManager();
+			fAnnotationModelManager.registerAnnotationModel(fManager.getDefaultAnnotationModelKey(), new ResourceMarkerAnnotationModel(fFile));
+			fAnnotationModelManager.connect(fManager.getDefaultAnnotationModelKey());
+		}
+	}
+	
+	/*
+	 * @see org.eclipse.core.internal.filebuffers.ResourceFileBuffer#disconnect()
+	 */
+	public void disconnect() throws CoreException {
+		super.disconnect();
+		if (isDisposed()) {
+			fAnnotationModelManager.disconnect(fManager.getDefaultAnnotationModelKey());
+			try {
+				fAnnotationModelManager.unregisterAnnotationModel(fManager.getDefaultAnnotationModelKey());
+			} catch (IllegalStateException x) {
+				// ignore
+			}
+			fAnnotationModelManager= null;
+		}
+	}
+	
+	protected void commitAnnotationModels() {
+		// TODO
+	}
+	
+	protected void revertAnnotationModels() {
+		// TODO
 	}
 }

@@ -21,7 +21,7 @@ import org.eclipse.swt.widgets.Canvas;
 /**
  * @since 3.0
  */
-public class AnnotationPresentation {
+public class AnnotationPresentation implements IAnnotationAdapter {
 	
 	/**
 	 * Convenience method for drawing an image aligned inside a rectangle.
@@ -85,8 +85,10 @@ public class AnnotationPresentation {
 	}
 	
 	
+	
 	protected Image fImage;
 	protected int fLayer;
+	
 	
 	public AnnotationPresentation() {
 	}
@@ -141,5 +143,17 @@ public class AnnotationPresentation {
 	public void paint(GC gc, Canvas canvas, Rectangle bounds) {
 		if (fImage != null)
 			drawImage(fImage, gc, canvas, bounds, SWT.CENTER, SWT.TOP);
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAdapter#annotationDataChanged(org.eclipse.jface.text.source.Annotation)
+	 */
+	public void annotationDataChanged(Annotation annotation) {
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAdapter#annotationDisposed(org.eclipse.jface.text.source.Annotation)
+	 */
+	public void annotationDisposed(Annotation annotation) {
 	}
 }

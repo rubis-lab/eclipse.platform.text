@@ -30,6 +30,10 @@ public interface IFileBuffer {
 	
 	/**
 	 * Returns the location of this file buffer.
+	 * <p>
+	 * The location is either a full path of a workspace resource or an
+	 * absolute path in the local file system.
+	 * </p>
 	 * 
 	 * @return the location of this file buffer
 	 */
@@ -82,21 +86,32 @@ public interface IFileBuffer {
 	boolean isShared();
 	
 	/**
-	 * Validates the state of this file buffer and tries to bring the buffer's underlying file into
-	 * a state in which it can be modified.
+	 * Validates the state of this file buffer and tries to bring the buffer's
+	 * underlying file into a state in which it can be modified. If state
+	 * validation is not supported this operation does nothing.
 	 * 
 	 * @param monitor the progress monitor
-	 * @param computationContext the context in which the validation is performed, e.g., a SWT shell
-	 * @exception CoreException if the underlying file can not be accessed to it's state cannot be changed
+	 * @param computationContext the context in which the validation is
+	 *               performed, e.g., a SWT shell
+	 * @exception CoreException if the underlying file can not be accessed to
+	 *                    it's state cannot be changed
 	 */
 	void validateState(IProgressMonitor monitor, Object computationContext) throws CoreException;
 	
 	/**
-	 * Returns whether the state of this file buffer has been validated.
+	 * Returns whether the state of this file buffer has been validated. If
+	 * state validation is not supported this method always returns <code>true</code>.
 	 * 
-	 * @return <code>true</code> if the state has been validated, <code>false</code> otherwise
+	 * @return <code>true</code> if the state has been validated, <code>false</code>
+	 *            otherwise
 	 */
 	boolean isStateValidated();
+	
+	/**
+	 * Resets state validation. If state validation is supported, <code>isStateValidated</code>
+	 * afterwars returns <code>false</code> unti the state is revalidated.
+	 */
+	void resetStateValidation();
 	
 	/**
 	 * Returns the status of this file buffer. This is the result of the last operation peformed on this file buffer or

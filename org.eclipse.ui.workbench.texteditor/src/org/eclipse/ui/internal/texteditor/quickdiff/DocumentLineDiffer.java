@@ -16,7 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -29,6 +29,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.jface.util.Assert;
 
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
@@ -160,7 +161,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		 * @see org.eclipse.jface.text.source.ILineDiffInfo#getOriginalText()
 		 */
 		public String[] getOriginalText() {
-			IDocument doc= fReferenceProvider.getReference(null);
+			IDocument doc= fLeftDocument;
 			if (doc != null) {
 				int startLine= fDifference.leftStart() + fOffset;
 				
@@ -185,8 +186,8 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 				return ret;
 			}
 			
-			Assert.isTrue(false);
-			return null;
+			// in initialization phase?
+			return new String[0];
 		}
 
 		/*
@@ -205,7 +206,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getSeverity()
 		 */
 		public int getSeverity() {
-			return IMarker.SEVERITY_INFO;
+			return 0; // same as IMarker.SEVERITY_INFO;
 		}
 
 		/*
@@ -232,9 +233,9 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 			else
 				added= null;
 			
-			String line= c + Math.abs(a) > 1 ? QuickDiffMessages.getString("quickdiff.annotation.line_plural") : QuickDiffMessages.getString("quickdiff.annotation.line_singular");  //$NON-NLS-1$//$NON-NLS-2$
+			String line= c > 1 || c == 0 && Math.abs(a) > 1 ? QuickDiffMessages.getString("quickdiff.annotation.line_plural") : QuickDiffMessages.getString("quickdiff.annotation.line_singular");  //$NON-NLS-1$//$NON-NLS-2$
 			
-			String ret= (changed != null ? changed : "") + (changed != null && added != null ? ", " : " ") + (added != null ? added : "") + " " + line;   //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+			String ret= (changed != null ? changed : "") + (changed != null ? " " + line : "") + (changed != null && added != null ? ", " : " ") + (added != null ? added : "") + (added != null && changed == null ? " " + line : "");   //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$
 			return ret;
 			
 		}
@@ -467,17 +468,13 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 * (Re-)initializes the differ using the current reference and <code>DiffInitializer</code>
 	 */
 	synchronized void initialize() {
+		// make new incoming changes go into the queue of stored events, plus signal we can't restore.
 		fIsSynchronized= false;
 		
-		// handle updates to the actual document.... should have temporary read-only copy of the documents
-		// the same does not apply for the reference document, since we reinitialize everytime it changes.
-		//
-		// this will block the update of the document (since documentAboutToBeChanged is synchronized)
-		// however, there is no other way to get a consistent known state (?).
 		if (fRightDocument == null)
 			return;
 		
-		// there is no point in receiving updates before the job is run
+		// there is no point in receiving updates before the job we get a new copy of the document for diffing
 		fRightDocument.removeDocumentListener(this);
 		
 		if (fLeftDocument != null) {
@@ -485,84 +482,185 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 			fLeftDocument= null;
 		}
 		
-		// for now: cancel a later invocation
+		// if there already is a job:
+		// return if it has not started yet, cancel it if already running
 		final Job oldJob= fInitializationJob; 
 		if (oldJob != null) {
 			// don't chain up jobs if there is one waiting already.
-			if (oldJob.getState() == Job.WAITING || oldJob.getState() == Job.SLEEPING)
+			if (oldJob.getState() == Job.WAITING)
 				return;
-			oldJob.cancel();
+			else
+				oldJob.cancel();
 		}
 		
 		fInitializationJob= new Job(QuickDiffMessages.getString("quickdiff.initialize")) { //$NON-NLS-1$
 
+			/*
+			 * This is run in a different thread. As the documents might be synchronized, never ever
+			 * access the documents in a synchronized section or expect deadlocks. See
+			 * https://bugs.eclipse.org/bugs/show_bug.cgi?id=44692
+			 */
 			public IStatus run(IProgressMonitor monitor) {
 				
+				// 1:	wait for any previous job that was canceled to avoid job flooding
+				// It will return relatively quickly as RangeDifferencer supports canceling
 				if (oldJob != null)
 					try {
 						oldJob.join();
 					} catch (InterruptedException e) {
+						// will not happen as noone interrupst our thread
 						Assert.isTrue(false);
 					}
 				
 				
+				// 2:	get the reference document 
 				IQuickDiffReferenceProvider provider= fReferenceProvider;
-				IDocument reference= provider == null ? null : provider.getReference(monitor);
-				if (reference == null) {
-					fireModelChanged();
-					return Status.OK_STATUS;
+				final IDocument left;
+				try {
+					left= provider == null ? null : provider.getReference(monitor);
+				} catch (CoreException e) {
+					synchronized (DocumentLineDiffer.this) {
+						if (isCanceled(monitor))
+							return Status.CANCEL_STATUS;
+						else {
+							clearModel();
+							fireModelChanged();
+							DocumentLineDiffer.this.notifyAll();
+							return e.getStatus();
+						}
+					}
 				}
+
+				// Getting our own copies of the documents for offline diffing.
+				//
+				// We need to make sure that we do get all document modifications after
+				// copying the documents as we want to reinject them later on to become consistent.
+				//
+				// Now this is fun. The reference documents may be PartiallySynchronizedDocuments
+				// which will result in a deadlock if they get changed externally before we get
+				// our exclusive copies.
+				// Here's what we do: we try over and over (without synchronization) to get copies 
+				// without interleaving modification. If there is a document change, we just repeat. 
 				
-				IDocument actual= fRightDocument;
+				IDocument right= fRightDocument; // fRightDocument, but not subject to change
+				IDocument actual= null; // the copy of the actual (right) document
+				IDocument reference= null; // the copy of the reference (left) document
+				
 				synchronized (DocumentLineDiffer.this) {
-					if (monitor != null && monitor.isCanceled() || actual == null)
-						return Status.CANCEL_STATUS;
-					
-					fStoredEvents.clear();
+					// 4: take an early exit if the documents are not valid
+					if (left == null || right == null) {
+						if (isCanceled(monitor))
+							return Status.CANCEL_STATUS;
+						else {
+							clearModel();
+							fireModelChanged();
+							DocumentLineDiffer.this.notifyAll();
+							return Status.OK_STATUS;
+						}
+					}
 					
 					// set the reference document
-					reference.addDocumentListener(DocumentLineDiffer.this);
-					fLeftDocument= reference;
-					
-					// get a local copy of the actual document
-					actual.addDocumentListener(DocumentLineDiffer.this);
+					fLeftDocument= left;
 				}
+					
+				right.addDocumentListener(DocumentLineDiffer.this);
+				left.addDocumentListener(DocumentLineDiffer.this);
+					
+				do {
+					// clear events
+					synchronized (DocumentLineDiffer.this) {
+						if (isCanceled(monitor))
+							return Status.CANCEL_STATUS;
+
+						fStoredEvents.clear();
+					}
+					
+					// access documents unsynched:
+					// get an exclusive copy of the actual document
+					reference= new Document(left.get());
+					actual= new Document(right.get());
+					
+					synchronized (DocumentLineDiffer.this) {
+						if (fStoredEvents.size() == 0)
+							break;
+					}
+					
+					
+				} while (true);
 				
+				// 6:	Do Da Diffing
 				DocLineComparator ref= new DocLineComparator(reference, null, false);
 				DocLineComparator act= new DocLineComparator(actual, null, false);
 				List diffs= RangeDifferencer.findRanges(monitor, ref, act);
 				
-				// set line table
+				// 7:	Reset the model to the just gotten differences
+				// 		re-inject stored events to get up to date.
+				List storedEvents;
 				synchronized (DocumentLineDiffer.this) {
-					if (fInitializationJob != this)
+					if (isCanceled(monitor))
 						return Status.CANCEL_STATUS;
 				
-					fInitializationJob= null;
-		
-					fIsSynchronized= true;
-					
+					// set the new differences so we can operate on them
 					fDifferences= diffs;
-					
-					// reinject events accumulated in the meantime.
-					try {
-						for (ListIterator iter= fStoredEvents.listIterator(); iter.hasNext();) {
-							DocumentEvent event= (DocumentEvent) iter.next();
-							handleAboutToBeChanged(event);
-							handleChange(event);
-							iter.remove();
+					storedEvents= new ArrayList(fStoredEvents);
+					fStoredEvents.clear();
+				}
+
+				// reinject events accumulated in the meantime.
+				try {
+					for (ListIterator iter= storedEvents.listIterator(); iter.hasNext();) {
+						DocumentEvent event= (DocumentEvent) iter.next();
+						// access documents unsynched:
+						handleAboutToBeChanged(event);
+						handleChanged(event);
+						
+						synchronized (DocumentLineDiffer.this) {
+							if (isCanceled(monitor))
+								return Status.CANCEL_STATUS;
+						
+							if (fStoredEvents.size() > 0) {
+								// early leave on interfering change
+								left.removeDocumentListener(DocumentLineDiffer.this);
+								right.removeDocumentListener(DocumentLineDiffer.this);
+								clearModel();
+								initialize();
+								return Status.CANCEL_STATUS;
+							}
 						}
-					} catch (BadLocationException e) {
-						initialize();
-						return Status.CANCEL_STATUS;
+						
 					}
-					
+				} catch (BadLocationException e) {
+					left.removeDocumentListener(DocumentLineDiffer.this);
+					right.removeDocumentListener(DocumentLineDiffer.this);
+					clearModel();
+					initialize();
+					return Status.CANCEL_STATUS;
+				}
+				
+				synchronized (DocumentLineDiffer.this) {
+					// signal done
+					fInitializationJob= null;
+					fIsSynchronized= true;
 					fLastDifference= null;
-			
+					
+					// inform blocking calls.
 					DocumentLineDiffer.this.notifyAll();
 				}
 				
 				fireModelChanged();
 				return Status.OK_STATUS;
+			}
+
+			private boolean isCanceled(IProgressMonitor monitor) {
+				return fInitializationJob != this || monitor != null && monitor.isCanceled();
+			}
+
+			private void clearModel() {
+				fLeftDocument= null;
+				fInitializationJob= null;
+				fStoredEvents.clear();
+				fLastDifference= null;
+				fDifferences.clear();
 			}
 			
 		};
@@ -578,7 +676,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 */
 	public synchronized void documentAboutToBeChanged(DocumentEvent event) {
 		// if a initialization is going on, we just store the events in the meantime
-		if (!isInitialized()) {
+		if (!isInitialized() && fInitializationJob != null) {
 			fStoredEvents.add(event);
 			return;
 		}
@@ -603,7 +701,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		if (doc == null)
 			return;
 
-		// store size of replaced region
+		// store size of replaced region (never synchronized -> not a problem)
 		fFirstLine= doc.getLineOfOffset(event.getOffset()); // store change bounding lines
 		fNLines= doc.getLineOfOffset(event.getOffset() + event.getLength()) - fFirstLine + 1;
 	}
@@ -615,8 +713,16 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		if (!isInitialized())
 			return;
 		
+		// https://bugs.eclipse.org/bugs/show_bug.cgi?id=44692
+		// don't allow incremental update for changes from the reference document
+		// as this could deadlock
+		if (event.getDocument() == fLeftDocument) {
+			initialize();
+			return;
+		}
+		
 		try {
-			handleChange(event);
+			handleChanged(event);
 		} catch (BadLocationException e) {
 			TextEditorPlugin.getDefault().getLog().log(new Status(IStatus.WARNING, TextEditorPlugin.PLUGIN_ID, IStatus.OK, "reinitializing quickdiff", e)); //$NON-NLS-1$
 			initialize();
@@ -635,7 +741,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 * 
 	 * @param event the document event
 	 */
-	void handleChange(DocumentEvent event) throws BadLocationException {
+	void handleChanged(DocumentEvent event) throws BadLocationException {
 		/*
 		 * Now, here we have a great example of object oriented programming.
 		 */
@@ -711,7 +817,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		// document, the change has already happened.
 		// left (reference) document
 		int leftOffset= left.getLineOffset(consistentBefore.leftStart() + shiftBefore);
-		int leftLine= consistentAfter.leftEnd() - 1;
+		int leftLine= Math.max(consistentAfter.leftEnd() - 1, 0);
 		if (modified == left)
 			leftLine += lineDelta;
 		IRegion leftLastLine= left.getLineInformation(leftLine - shiftAfter);
@@ -721,7 +827,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 
 		// right (actual) document
 		int rightOffset= right.getLineOffset(consistentBefore.rightStart() + shiftBefore);
-		int rightLine= consistentAfter.rightEnd() - 1;
+		int rightLine= Math.max(consistentAfter.rightEnd() - 1, 0);
 		if (modified == right)
 			rightLine += lineDelta;
 		IRegion rightLastLine= right.getLineInformation(rightLine - shiftAfter);
@@ -729,12 +835,21 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		IRegion rightRegion= new Region(rightOffset, rightEndOffset - rightOffset);
 		DocLineComparator change= new DocLineComparator(right, rightRegion, false);
 
+		// put an upper bound to the delay we can afford
+		if (leftLine - shiftAfter - (consistentBefore.leftStart() + shiftBefore) > 50 || rightLine - shiftAfter - (consistentBefore.rightStart() + shiftBefore) > 50) {
+			initialize();
+			return;
+		}
+
 		// debug
 //			System.out.println("compare window: "+size+"\n\n<" + left.get(leftRegion.getOffset(), leftRegion.getLength()) +  //$NON-NLS-1$//$NON-NLS-2$
 //					">\n\n<" + right.get(rightRegion.getOffset(), rightRegion.getLength()) + ">\n"); //$NON-NLS-1$ //$NON-NLS-2$
 		
 		// compare
 		List diffs= RangeDifferencer.findRanges(reference, change);
+		if (diffs.size() == 0) {
+			diffs.add(new RangeDifference(RangeDifference.CHANGE, 0, 0, 0, 0));
+		}
 
 		
 		// shift the partial diffs to the absolute document positions
@@ -919,7 +1034,7 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 * @param size the minimal size of the range 
 	 * @return the first range found, or the last range in the differ if none can be found
 	 */
-	private RangeDifference findConsistentRangeAfterRight(int line, int size) throws BadLocationException {
+	private RangeDifference findConsistentRangeAfterRight(int line, int size) {
 		RangeDifference found= null;
 		
 		int unchanged= -1; // the number of unchanged lines after line
@@ -1095,7 +1210,6 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		++fOpenConnections;
 		if (fOpenConnections == 1) {
 			fRightDocument= document;
-			fRightDocument.addDocumentListener(this);
 			initialize();
 		}
 	}
@@ -1235,6 +1349,8 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 		
 		fDifferences.clear();
 		
+		fIsSynchronized= false;
+		
 		fireModelChanged();
 	}
 	
@@ -1242,6 +1358,8 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 * Resumes diffing of this differ. Must only be called after suspend.
 	 */
 	public synchronized void resume() {
+		if (fRightDocument != null)
+			fRightDocument.addDocumentListener(this);
 		initialize();
 	}
 }

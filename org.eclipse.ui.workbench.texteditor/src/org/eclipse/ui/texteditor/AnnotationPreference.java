@@ -56,10 +56,30 @@ public class AnnotationPreference {
 	private String fTextKey;
 	/** The default visibility inside text */
 	private boolean fTextValue;
+	/**
+	 * The preference key for highlighting inside text.
+	 * @since 3.0
+	 */
+	private String fHighlightKey;
+	/**
+	 * The default value for highlighting inside text.
+	 * @since 3.0
+	 */
+	private boolean fHighlightValue;
 	/** The preference key for the visibility in the overview ruler */
 	private String fOverviewRulerKey;
 	/** The default visibility in the overview ruler */
 	private boolean fOverviewRulerValue;
+	/**
+	 * The preference key for the visibility in the vertical ruler.
+	 * @since 3.0
+	 */
+	private String fVerticalRulerKey;
+	/**
+	 * The default visibility in the vertical ruler.
+	 * @since 3.0
+	 */
+	private boolean fVerticalRulerValue;
 	/** The presentation layer */
 	private int fPresentationLayer;
 	/** Indicates whether the annotation type contributed to the overview ruler's header */
@@ -128,7 +148,7 @@ public class AnnotationPreference {
 	public boolean isPreferenceKey(String key) {
 		if (key == null)
 			return false;
-		return key.equals(fColorKey) || key.equals(fOverviewRulerKey) || key.equals(fTextKey);
+		return key.equals(fColorKey) || key.equals(fOverviewRulerKey) || key.equals(fTextKey) || key.equals(fHighlightKey) || key.equals(fVerticalRulerKey);
 	}
 	
 	/**
@@ -193,7 +213,27 @@ public class AnnotationPreference {
 	public boolean getOverviewRulerPreferenceValue() {
 		return fOverviewRulerValue;
 	}
-
+	
+	/**
+	 * Returns the preference key for the visibility in the vertical ruler.
+	 * 
+	 * @return the preference key for the visibility in the vertical ruler
+	 * @since 3.0
+	 */
+	public String getVerticalRulerPreferenceKey() {
+		return fVerticalRulerKey;
+	}
+	
+	/**
+	 * Returns the default visibility in the vertical ruler.
+	 * 
+	 * @return the default visibility in the vertical ruler
+	 * @since 3.0
+	 */
+	public boolean getVerticalRulerPreferenceValue() {
+		return fVerticalRulerValue;
+	}
+	
 	/**
 	 * Returns the presentation layer.
 	 * 
@@ -230,6 +270,26 @@ public class AnnotationPreference {
 		return fTextValue;
 	}
 	
+	/**
+	 * Returns the preference key for highlighting inside text.
+	 * 
+	 * @return the preference key for highlighting inside text
+	 * @since 3.0
+	 */
+	public String getHighlightPreferenceKey() {
+		return fHighlightKey;
+	}
+
+	/**
+	 * Returns the default value for highlighting inside text.
+	 * 
+	 * @return the default value for highlighting inside text
+	 * @since 3.0
+	 */
+	public boolean getHighlightPreferenceValue() {
+		return fHighlightValue;
+	}
+		
 	/**
 	 * Returns whether the annotation type contributes to the header of the overview ruler.
 	 * 
@@ -303,6 +363,26 @@ public class AnnotationPreference {
 	}
 	
 	/**
+	 * Sets the preference key for the visibility in the vertical ruler.
+	 * 
+	 * @param verticalRulerKey the preference key
+	 * @since 3.0
+	 */
+	public void setVerticalRulerPreferenceKey(String verticalRulerKey) {
+		fVerticalRulerKey= verticalRulerKey;
+	}
+	
+	/**
+	 * Sets the default visibility in the vertical ruler.
+	 * 
+	 * @param verticalRulerValue <code>true</code> if visible by default, <code>false</code> otherwise
+	 * @since 3.0
+	 */
+	public void setVerticalRulerPreferenceValue(boolean verticalRulerValue) {
+		fVerticalRulerValue= verticalRulerValue;
+	}
+	
+	/**
 	 * Sets the presentation layer.
 	 * 
 	 * @param presentationLayer the presentation layer
@@ -321,9 +401,9 @@ public class AnnotationPreference {
 	}
 
 	/**
-	 * Sets the preference key for the visibility inside text.
+	 * Sets the preference key for the visibility of squiggles inside text.
 	 * 
-	 * @param overviewRulerKey the preference key
+	 * @param textKey the preference key
 	 */
 	public void setTextPreferenceKey(String textKey) {
 		fTextKey= textKey;
@@ -332,10 +412,30 @@ public class AnnotationPreference {
 	/**
 	 * Sets the default visibility inside text.
 	 * 
-	 * @param overviewRulerValue <code>true</code> if visible by default, <code>false</code> otherwise
+	 * @param textValue <code>true</code> if visible by default, <code>false</code> otherwise
 	 */
 	public void setTextPreferenceValue(boolean textValue) {
 		fTextValue= textValue;
+	}
+	
+	/**
+	 * Sets the preference key for highlighting inside text.
+	 * 
+	 * @param highlightKey the preference key
+	 * @since 3.0
+	 */
+	public void setHighlightPreferenceKey(String highlightKey) {
+		fHighlightKey= highlightKey;
+	}
+	
+	/**
+	 * Sets the default value for highlighting inside text.
+	 * 
+	 * @param highlightValue <code>true</code> if highlighted in text by default, <code>false</code> otherwise
+	 * @since 3.0
+	 */
+	public void setHighlightPreferenceValue(boolean highlightValue) {
+		fHighlightValue= highlightValue;
 	}
 	
 	/**

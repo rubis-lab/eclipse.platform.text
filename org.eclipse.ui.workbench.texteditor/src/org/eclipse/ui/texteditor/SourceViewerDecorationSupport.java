@@ -23,6 +23,7 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.CursorLinePainter;
 import org.eclipse.jface.text.IPainter;
 import org.eclipse.jface.text.ITextViewerExtension2;
+import org.eclipse.jface.text.ITextViewerExtension4;
 import org.eclipse.jface.text.MarginPainter;
 import org.eclipse.jface.text.source.AnnotationPainter;
 import org.eclipse.jface.text.source.IAnnotationAccess;
@@ -170,9 +171,13 @@ public class SourceViewerDecorationSupport {
 		while (e.hasNext()) {
 			Object type= e.next();
 			if (areAnnotationsShown(type))
-				showAnnotations(type);
+				showAnnotations(type, false);
 			else
-				hideAnnotations(type);
+				hideAnnotations(type, false);
+			if (areAnnotationsHighlighted(type))
+				showAnnotations(type, true);
+			else
+				hideAnnotations(type, true);
 		}
 	}
 	
@@ -388,9 +393,17 @@ public class SourceViewerDecorationSupport {
 			
 			if (info.getTextPreferenceKey().equals(p)) {
 				if (areAnnotationsShown(info.getAnnotationType()))
-					showAnnotations(info.getAnnotationType());
+					showAnnotations(info.getAnnotationType(), false);
 				else
-					hideAnnotations(info.getAnnotationType());
+					hideAnnotations(info.getAnnotationType(), false);
+				return;
+			}
+			
+			if (info.getHighlightPreferenceKey() != null && info.getHighlightPreferenceKey().equals(p)) {
+				if (areAnnotationsHighlighted(info.getAnnotationType()))
+					showAnnotations(info.getAnnotationType(), true);
+				else
+					hideAnnotations(info.getAnnotationType(), true);
 				return;
 			}
 			
@@ -441,6 +454,8 @@ public class SourceViewerDecorationSupport {
 			return getColor( info.getColorPreferenceKey());
 		return null;
 	}
+	
+
 	
 	/**
 	 * Returns the layer of the given annotation type.
@@ -587,16 +602,22 @@ public class SourceViewerDecorationSupport {
 	 * Enables annotations in the source viewer for the given annotation type.
 	 * 
 	 * @param annotationType the annotation type
+	 * @param highlighting <code>true</code> if highlighting <code>false</code> if painting squiggles
 	 */
-	private void showAnnotations(Object annotationType) {
+	private void showAnnotations(Object annotationType, boolean highlighting) {
 		if (fSourceViewer instanceof ITextViewerExtension2) {
 			if (fAnnotationPainter == null) {
 				fAnnotationPainter= new AnnotationPainter(fSourceViewer, fAnnotationAccess);
+				if (fSourceViewer instanceof ITextViewerExtension4)
+					((ITextViewerExtension4)fSourceViewer).addTextPresentationListener(fAnnotationPainter);
 				ITextViewerExtension2 extension= (ITextViewerExtension2) fSourceViewer;
 				extension.addPainter(fAnnotationPainter);
 			}
 			fAnnotationPainter.setAnnotationTypeColor(annotationType, getAnnotationTypeColor(annotationType));
-			fAnnotationPainter.addAnnotationType(annotationType);
+			if (highlighting)
+				fAnnotationPainter.addHighlightAnnotationType(annotationType);
+			else
+				fAnnotationPainter.addAnnotationType(annotationType);
 			fAnnotationPainter.paint(IPainter.CONFIGURATION);
 		}
 	}
@@ -610,6 +631,9 @@ public class SourceViewerDecorationSupport {
 				ITextViewerExtension2 extension= (ITextViewerExtension2) fSourceViewer;
 				extension.removePainter(fAnnotationPainter);
 			}
+			if (fSourceViewer instanceof ITextViewerExtension4)
+				((ITextViewerExtension4)fSourceViewer).removeTextPresentationListener(fAnnotationPainter);
+			
 			fAnnotationPainter.deactivate(true);
 			fAnnotationPainter.dispose();
 			fAnnotationPainter= null;
@@ -622,10 +646,16 @@ public class SourceViewerDecorationSupport {
 	 * Hides annotations in the source viewer for the given annotation type.
 	 * 
 	 * @param annotationType the annotation type
+	 * @param highlighting <code>true</code> if highlighting <code>false</code> if painting squiggles
+	 * @since 3.0
 	 */
-	private void hideAnnotations(Object annotationType) {
+	private void hideAnnotations(Object annotationType, boolean highlighting) {
 		if (fAnnotationPainter != null) {
-			fAnnotationPainter.removeAnnotationType(annotationType);
+			if (highlighting)
+				fAnnotationPainter.removeHighlightAnnotationType(annotationType);
+			else
+				fAnnotationPainter.removeAnnotationType(annotationType);
+			fAnnotationPainter.paint(IPainter.CONFIGURATION);
 			shutdownAnnotationPainter();
 		}
 	}
@@ -644,7 +674,23 @@ public class SourceViewerDecorationSupport {
 		}
 		return false;
 	}
-
+	
+	/**
+	 * Tells whether annotations are highlighted in the source viewer for the given type.
+	 * 
+	 * @param annotationType the annotation type
+	 * @return <code>true</code> if the annotations are highlighted
+	 * @since 3.0
+	 */	
+	private boolean areAnnotationsHighlighted(Object annotationType) {
+		if (fPreferenceStore != null) {
+			AnnotationPreference info= (AnnotationPreference)fAnnotationTypeKeyMap.get(annotationType);
+			if (info != null)
+				return info.getHighlightPreferenceKey() != null && fPreferenceStore.getBoolean(info.getHighlightPreferenceKey());
+		}
+		return false;
+	}
+	
 	/**
 	 * Tells whether annotation overview is enabled for the given type.
 	 * 

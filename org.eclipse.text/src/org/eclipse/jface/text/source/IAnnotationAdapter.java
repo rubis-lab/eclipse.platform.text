@@ -9,23 +9,20 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.ui.texteditor;
-
-
-import java.util.ResourceBundle;
-import org.eclipse.jface.text.source.IVerticalRulerInfo;
-
+package org.eclipse.jface.text.source;
 
 /**
- * @deprecated use <code>MarkerRulerAction</code> instead
- * @since 2.0
+ * @since 3.0
  */
-public class MarkerRulerInfoAction extends MarkerRulerAction {
+public interface IAnnotationAdapter {
+		
+	/**
+	 * Notfies this adapter that the annotation data changed. 
+	 */
+	void annotationDataChanged(Annotation annotation);
 	
 	/**
-	 * @deprecated use super class instead
+	 * Notifies this adapter that it's annotation has been disposed.
 	 */
-	public MarkerRulerInfoAction(ResourceBundle bundle, String prefix, IVerticalRulerInfo ruler, ITextEditor editor, String markerType, boolean askForLabel) {
-		super(bundle, prefix, editor, ruler, markerType, askForLabel);
-	}
+	void annotationDisposed(Annotation annotation);
 }

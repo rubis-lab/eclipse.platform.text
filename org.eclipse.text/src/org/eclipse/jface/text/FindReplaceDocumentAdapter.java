@@ -135,6 +135,10 @@ public class FindReplaceDocumentAdapter implements CharSequence {
 				throw new BadLocationException();
 			
 			int patternFlags= 0;
+			
+			if (regExSearch)
+				patternFlags |= Pattern.MULTILINE;
+			
 			if (!caseSensitive)
 				patternFlags |= Pattern.CASE_INSENSITIVE; 
 
@@ -190,7 +194,7 @@ public class FindReplaceDocumentAdapter implements CharSequence {
 
 				fFindReplaceState= operationCode;
 				
-				if (found) {
+				if (found && fFindReplaceMatcher.group().length() > 0) {
 					return new Region(fFindReplaceMatcher.start(), fFindReplaceMatcher.group().length());
 				} else {
 					return null;

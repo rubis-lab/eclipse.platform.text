@@ -38,10 +38,11 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 
 /**
- *
+ * @since 3.0
  */
 public class TextFileBufferManager implements ITextFileBufferManager {	
-		
+	
+	private final Object fDefaultAnnotationModelKey= new Object();
 	private Map fFilesBuffers= new HashMap();
 	private List fFileBufferListeners= new ArrayList();
 	private ExtensionsRegistry fRegistry;
@@ -57,6 +58,8 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 */
 	public void connect(IPath location, IProgressMonitor monitor) throws CoreException {
 		Assert.isNotNull(location);
+		location= FileBuffers.normalizeLocation(location);
+		
 		AbstractFileBuffer fileBuffer= (AbstractFileBuffer) fFilesBuffers.get(location);
 		if (fileBuffer == null)  {
 			
@@ -79,6 +82,8 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 */
 	public void disconnect(IPath location, IProgressMonitor monitor) throws CoreException {
 		Assert.isNotNull(location);
+		location= FileBuffers.normalizeLocation(location);
+		
 		AbstractFileBuffer fileBuffer= (AbstractFileBuffer) fFilesBuffers.get(location);
 		if (fileBuffer != null) {
 			fileBuffer.disconnect();
@@ -99,20 +104,8 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 		return new JavaTextFileBuffer(this);
 	}
 	
-	/**
-	 * Returns the workspace file at the given location or <code>null</code> if
-	 * the location is not a valid location in the workspace.
-	 * 
-	 * @param location the location
-	 * @return the workspace file at the location or <code>null</code>
-	 */
-	public IFile getWorkspaceFileAtLocation(IPath location) {
-		IWorkspace workspace= ResourcesPlugin.getWorkspace();
-		return workspace.getRoot().getFileForLocation(location);		
-	}
-	
 	private boolean isWorkspaceResource(IPath location) {
-		return getWorkspaceFileAtLocation(location) != null;
+		return FileBuffers.getWorkspaceFileAtLocation(location) != null;
 	}
 	
 	private boolean isTextFile(IPath location) {
@@ -123,6 +116,7 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 * @see org.eclipse.core.filebuffers.IFileBufferManager#getFileBuffer(org.eclipse.core.runtime.IPath)
 	 */
 	public IFileBuffer getFileBuffer(IPath location) {
+		location= FileBuffers.normalizeLocation(location);
 		return (IFileBuffer) fFilesBuffers.get(location);
 	}
 	
@@ -130,6 +124,7 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 * @see org.eclipse.core.filebuffers.ITextFileBufferManager#getTextFileBuffer(org.eclipse.core.runtime.IPath)
 	 */
 	public ITextFileBuffer getTextFileBuffer(IPath location) {
+		location= FileBuffers.normalizeLocation(location);
 		return (ITextFileBuffer) fFilesBuffers.get(location);
 	}
 
@@ -139,11 +134,21 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	public String getDefaultEncoding() {
 		return ResourcesPlugin.getEncoding();
 	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.ITextFileBufferManager#getDefaultAnnotationModelKey()
+	 */
+	public Object getDefaultAnnotationModelKey() {
+		return fDefaultAnnotationModelKey;
+	}
 
 	/*
 	 * @see org.eclipse.core.filebuffers.ITextFileBufferManager#createEmptyDocument(org.eclipse.core.runtime.IPath)
 	 */
 	public IDocument createEmptyDocument(IPath location) {
+		Assert.isNotNull(location);
+		location= FileBuffers.normalizeLocation(location);
+		
 		IDocumentFactory factory= fRegistry.getDocumentFactory(location);
 		
 		IDocument document= null;
@@ -190,6 +195,8 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 */
 	public void requestSynchronizationContext(IPath location) {
 		Assert.isNotNull(location);
+		location= FileBuffers.normalizeLocation(location);
+		
 		AbstractFileBuffer fileBuffer= (AbstractFileBuffer) fFilesBuffers.get(location);
 		if (fileBuffer != null)
 			fileBuffer.requestSynchronizationContext();
@@ -200,6 +207,8 @@ public class TextFileBufferManager implements ITextFileBufferManager {
 	 */
 	public void releaseSynchronizationContext(IPath location) {
 		Assert.isNotNull(location);
+		location= FileBuffers.normalizeLocation(location);
+		
 		AbstractFileBuffer fileBuffer= (AbstractFileBuffer) fFilesBuffers.get(location);
 		if (fileBuffer != null)
 			fileBuffer.releaseSynchronizationContext();

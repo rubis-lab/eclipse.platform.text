@@ -21,6 +21,8 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
+import org.eclipse.core.filebuffers.FileBuffers;
+
 /**
  * @since 3.0
  */
@@ -65,7 +67,7 @@ public abstract class JavaFileBuffer extends AbstractFileBuffer  {
 	 * @return the file at the given location
 	 */
 	private File getFileAtLocation(IPath location) {
-		File file=  location.toFile();
+		File file=  FileBuffers.getSystemFileAtLocation(location);
 		return file.exists() ? file : null;
 	}
 	
@@ -156,6 +158,13 @@ public abstract class JavaFileBuffer extends AbstractFileBuffer  {
 	 */
 	public boolean isStateValidated() {
 		return true;
+	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.IFileBuffer#resetStateValidation()
+	 */
+	public void resetStateValidation() {
+		// nop
 	}
 
 	/**

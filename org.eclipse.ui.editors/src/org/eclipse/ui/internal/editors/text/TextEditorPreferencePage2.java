@@ -107,7 +107,9 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 	private ColorEditor fAppearanceColorEditor;
 	private ColorEditor fAnnotationForegroundColorEditor;
 	private Button fShowInTextCheckBox;
+	private Button fHighlightInTextCheckBox;
 	private Button fShowInOverviewRulerCheckBox;
+	private Button fShowInVerticalRulerCheckBox;
 	private String[][] fQuickDiffProviderListModel;
 
 	
@@ -130,7 +132,11 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 			AnnotationPreference info= (AnnotationPreference) e.next();
 			overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.STRING, info.getColorPreferenceKey()));
 			overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, info.getTextPreferenceKey()));
+			if (info.getHighlightPreferenceKey() != null)
+				overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, info.getHighlightPreferenceKey()));
 			overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, info.getOverviewRulerPreferenceKey()));
+			if (info.getVerticalRulerPreferenceKey() != null)
+				overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, info.getVerticalRulerPreferenceKey()));
 		}
 		
 		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.STRING, ExtendedTextEditorPreferenceConstants.EDITOR_CURRENT_LINE_COLOR));
@@ -139,10 +145,6 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.STRING, ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLOR));
 		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.INT, ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLUMN));
 		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN));
-		
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.STRING, ExtendedTextEditorPreferenceConstants.EDITOR_UNKNOWN_INDICATION_COLOR));
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, ExtendedTextEditorPreferenceConstants.EDITOR_UNKNOWN_INDICATION));
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, ExtendedTextEditorPreferenceConstants.EDITOR_UNKNOWN_INDICATION_IN_OVERVIEW_RULER));
 		
 		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(OverlayPreferenceStore.BOOLEAN, ExtendedTextEditorPreferenceConstants.EDITOR_OVERVIEW_RULER));
 		
@@ -162,7 +164,7 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 		Iterator e= preferences.getAnnotationPreferences().iterator();
 		while (e.hasNext()) {
 			AnnotationPreference info= (AnnotationPreference) e.next();
-			listModelItems.add(new String[] { info.getPreferenceLabel(), info.getColorPreferenceKey(), info.getTextPreferenceKey(), info.getOverviewRulerPreferenceKey()});
+			listModelItems.add(new String[] { info.getPreferenceLabel(), info.getColorPreferenceKey(), info.getTextPreferenceKey(), info.getOverviewRulerPreferenceKey(), info.getHighlightPreferenceKey(), info.getVerticalRulerPreferenceKey()});
 		}
 		String[][] items= new String[listModelItems.size()][];
 		listModelItems.toArray(items);
@@ -222,7 +224,23 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 		fShowInTextCheckBox.setSelection(fOverlayStore.getBoolean(key));
 		
 		key= fAnnotationColorListModel[i][3];
-		fShowInOverviewRulerCheckBox.setSelection(fOverlayStore.getBoolean(key));				
+		fShowInOverviewRulerCheckBox.setSelection(fOverlayStore.getBoolean(key));
+		
+		key= fAnnotationColorListModel[i][4];
+		if (key != null) {
+			fHighlightInTextCheckBox.setSelection(fOverlayStore.getBoolean(key));
+			fHighlightInTextCheckBox.setEnabled(true);
+		} else
+			fHighlightInTextCheckBox.setEnabled(false);
+
+		key= fAnnotationColorListModel[i][5];
+		if (key != null) {
+			fShowInVerticalRulerCheckBox.setSelection(fOverlayStore.getBoolean(key));
+			fShowInVerticalRulerCheckBox.setEnabled(true);
+		} else {
+			fShowInVerticalRulerCheckBox.setSelection(true);
+			fShowInVerticalRulerCheckBox.setEnabled(false);
+		}
 	}
 	
 	private void handleProviderListSelection() {
@@ -458,12 +476,26 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 		gd.horizontalSpan= 2;
 		fShowInTextCheckBox.setLayoutData(gd);
 		
+		fHighlightInTextCheckBox= new Button(optionsComposite, SWT.CHECK);
+		fHighlightInTextCheckBox.setText(TextEditorMessages.getString("TextEditorPreferencePage.annotations.highlightInText")); //$NON-NLS-1$
+		gd= new GridData(GridData.FILL_HORIZONTAL);
+		gd.horizontalAlignment= GridData.BEGINNING;
+		gd.horizontalSpan= 2;
+		fHighlightInTextCheckBox.setLayoutData(gd);
+		
 		fShowInOverviewRulerCheckBox= new Button(optionsComposite, SWT.CHECK);
 		fShowInOverviewRulerCheckBox.setText(TextEditorMessages.getString("TextEditorPreferencePage.annotations.showInOverviewRuler")); //$NON-NLS-1$
 		gd= new GridData(GridData.FILL_HORIZONTAL);
 		gd.horizontalAlignment= GridData.BEGINNING;
 		gd.horizontalSpan= 2;
 		fShowInOverviewRulerCheckBox.setLayoutData(gd);
+
+		fShowInVerticalRulerCheckBox= new Button(optionsComposite, SWT.CHECK);
+		fShowInVerticalRulerCheckBox.setText(TextEditorMessages.getString("TextEditorPreferencePage.annotations.showInVerticalRuler")); //$NON-NLS-1$
+		gd= new GridData(GridData.FILL_HORIZONTAL);
+		gd.horizontalAlignment= GridData.BEGINNING;
+		gd.horizontalSpan= 2;
+		fShowInVerticalRulerCheckBox.setLayoutData(gd);
 		
 		label= new Label(optionsComposite, SWT.LEFT);
 		label.setText(TextEditorMessages.getString("TextEditorPreferencePage.annotations.color")); //$NON-NLS-1$
@@ -499,6 +531,18 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 			}
 		});
 		
+		fHighlightInTextCheckBox.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {
+				// do nothing
+			}
+			
+			public void widgetSelected(SelectionEvent e) {
+				int i= fAnnotationList.getSelectionIndex();
+				String key= fAnnotationColorListModel[i][4];
+				fOverlayStore.setValue(key, fHighlightInTextCheckBox.getSelection());
+			}
+		});
+		
 		fShowInOverviewRulerCheckBox.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
 				// do nothing
@@ -510,7 +554,19 @@ public class TextEditorPreferencePage2 extends PreferencePage implements IWorkbe
 				fOverlayStore.setValue(key, fShowInOverviewRulerCheckBox.getSelection());
 			}
 		});
-		
+
+		fShowInVerticalRulerCheckBox.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {
+				// do nothing
+			}
+			
+			public void widgetSelected(SelectionEvent e) {
+				int i= fAnnotationList.getSelectionIndex();
+				String key= fAnnotationColorListModel[i][5];
+				fOverlayStore.setValue(key, fShowInVerticalRulerCheckBox.getSelection());
+			}
+		});
+				
 		foregroundColorButton.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
 				// do nothing

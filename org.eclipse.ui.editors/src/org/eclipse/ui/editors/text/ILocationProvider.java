@@ -19,6 +19,10 @@ public interface ILocationProvider {
 	
 	/**
 	 * Returns the location of the given object or <code>null</code>.
+	 * <p>
+	 * The provided location is either a full path of a workspace resource or
+	 * an absolute path in the local file system.
+	 * </p>
 	 * 
 	 * @return the location of the given object or <code>null</code>
 	 */

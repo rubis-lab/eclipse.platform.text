@@ -27,11 +27,13 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
+import org.eclipse.core.filebuffers.IAnnotationModelManager;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
 
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
+import org.eclipse.jface.text.source.IAnnotationModel;
 
 /**
  * @since 3.0
@@ -82,6 +84,8 @@ public class JavaTextFileBuffer extends JavaFileBuffer implements ITextFileBuffe
 	protected String fEncoding;
 	/** Internal document listener */
 	protected IDocumentListener fDocumentListener= new DocumentListener();
+	/** The annotation model manager */
+	protected IAnnotationModelManager fAnnotationModelManager;
 
 
 
@@ -95,7 +99,7 @@ public class JavaTextFileBuffer extends JavaFileBuffer implements ITextFileBuffe
 	public IDocument getDocument() {
 		return fDocument;
 	}
-
+	
 	/*
 	 * @see org.eclipse.core.buffer.text.IBufferedTextFile#getEncoding()
 	 */
@@ -333,5 +337,15 @@ public class JavaTextFileBuffer extends JavaFileBuffer implements ITextFileBuffe
 			Status status= new Status(IStatus.ERROR, FileBuffersPlugin.PLUGIN_ID, IResourceStatus.OUT_OF_SYNC_LOCAL, "out of sync", null); 
 			throw new CoreException(status);
 		}
+	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.ITextFileBuffer#getAnnotationModelManager()
+	 */
+	public IAnnotationModelManager getAnnotationModelManager() {
+		// TODO
+		if (fAnnotationModelManager == null)
+			fAnnotationModelManager= new AnnotationModelManager();
+		return fAnnotationModelManager;
 	}
 }

@@ -12,6 +12,7 @@ package org.eclipse.core.filebuffers;
 
 
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.source.IAnnotationModel;
 
 /**
  * A text file buffer is a file buffer for text files.  The contents of a text file buffe is
@@ -29,6 +30,13 @@ public interface ITextFileBuffer extends IFileBuffer {
 	 * @return the document of this text file buffer
 	 */
 	IDocument getDocument();
+	
+	/**
+	 * Returns the annotation model manager for this text file buffer.
+	 * 
+	 * return the annotation model manager for this text file buffer
+	 */
+	IAnnotationModelManager getAnnotationModelManager();
 	
 	/**
 	 * Returns the character encoding to be used for reading and writing the
