@@ -47,6 +47,7 @@ import org.eclipse.jface.text.source.OverviewRuler;
 import org.eclipse.jface.text.source.SourceViewer;
 
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.editors.text.ITextEditorHelpContextIds;
 import org.eclipse.ui.ide.IDEActionFactory;
 import org.eclipse.ui.ide.IGotoMarker;
 import org.eclipse.ui.texteditor.quickdiff.QuickDiff;
@@ -96,14 +97,6 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 * Preference key for print margin ruler column.
 	 */
 	private final static String PRINT_MARGIN_COLUMN= ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLUMN;
-	/**
-	 * Help context id for the add task action.
-	 */
-	protected final static String ADD_TASK_HELP_CONTEXT_ID= IAbstractTextEditorHelpContextIds.PREFIX + IDEActionFactory.ADD_TASK.getId() + IAbstractTextEditorHelpContextIds.ACTION_POSTFIX;
-	/**
-	 * Help context id for the bookmark action.
-	 */
-	protected final static String BOOKMARK_HELP_CONTEXT_ID= IAbstractTextEditorHelpContextIds.PREFIX + IDEActionFactory.BOOKMARK.getId() + IAbstractTextEditorHelpContextIds.ACTION_POSTFIX;
 	
 	/**
 	 * Adapter class for <code>IGotoMarker</code>.
@@ -964,12 +957,12 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 		super.createActions();
 		
 		ResourceAction action= new AddMarkerAction(TextEditorMessages.getResourceBundle(), "Editor.AddBookmark.", this, IMarker.BOOKMARK, true); //$NON-NLS-1$
-		action.setHelpContextId(BOOKMARK_HELP_CONTEXT_ID);
+		action.setHelpContextId(ITextEditorHelpContextIds.BOOKMARK_ACTION);
 		action.setActionDefinitionId(ITextEditorActionDefinitionIds.ADD_BOOKMARK);
 		setAction(IDEActionFactory.BOOKMARK.getId(), action);
 
 		action= new AddTaskAction(TextEditorMessages.getResourceBundle(), "Editor.AddTask.", this); //$NON-NLS-1$
-		action.setHelpContextId(ADD_TASK_HELP_CONTEXT_ID);
+		action.setHelpContextId(ITextEditorHelpContextIds.ADD_TASK_ACTION);
 		action.setActionDefinitionId(ITextEditorActionDefinitionIds.ADD_TASK);
 		setAction(IDEActionFactory.ADD_TASK.getId(), action);		
 	}
