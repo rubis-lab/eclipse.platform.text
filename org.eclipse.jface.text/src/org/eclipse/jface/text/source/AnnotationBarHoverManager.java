@@ -48,7 +48,8 @@ import org.eclipse.jface.text.ITextViewerExtension3;
  * @since 2.0
  */
 public class AnnotationBarHoverManager extends AbstractHoverInformationControlManager {
-	
+	public static final boolean USE_RADIAL_LAYOUT= true;
+
 	/**
 	 * The  information control closer for the hover information. Closes the information control as 
 	 * soon as the mouse pointer leaves the subject area, a mouse button is pressed, the user presses a key,
@@ -438,7 +439,17 @@ public class AnnotationBarHoverManager extends AbstractHoverInformationControlMa
 		
 		if (hover instanceof IAnnotationHoverExtension2) {
 			Control subjectControl= getSubjectControl();
-			if (true) return subjectControl.toDisplay(subjectArea.x + subjectArea.width / 2 - controlSize.x / 2, subjectArea.y + subjectArea.height / 2 - controlSize.y / 2);
+			
+			// HACK for circular layout positioning (only works if there is enough space...)
+			if (USE_RADIAL_LAYOUT) {
+				// set center of radial control to center of annotation / subject area
+				// HACK if other rulers than just the annotation ruler are displayed, the popup gets centered over all 
+				// -> use 6 as we know that the annotation ruler is 12 wide.
+				Point ret= subjectControl.toDisplay(subjectArea.x + 6 - controlSize.x / 2, subjectArea.y + subjectArea.height / 2 - controlSize.y / 2);
+				ret.x= Math.max(0, ret.x);
+				ret.y= Math.max(0, ret.y);
+				return ret;
+			}
 			// return a location that just overlaps the annotation on the bar
 			if (anchor == AbstractInformationControlManager.ANCHOR_RIGHT)
 				return subjectControl.toDisplay(subjectArea.x - 4, subjectArea.y - 2);

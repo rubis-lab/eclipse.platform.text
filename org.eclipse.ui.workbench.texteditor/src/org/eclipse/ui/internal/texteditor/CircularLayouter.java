@@ -13,8 +13,6 @@ package org.eclipse.ui.internal.texteditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Region;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Layout;
@@ -26,7 +24,7 @@ import org.eclipse.swt.widgets.Layout;
  */
 public class CircularLayouter implements IExpansionLayouter {
 	
-	static class RadialLayout extends Layout {
+	class RadialLayout extends Layout {
 		private int fRadius= 67;
 		
 		RadialLayout(int radius){
@@ -59,20 +57,31 @@ public class CircularLayouter implements IExpansionLayouter {
 			
 			int[] locations= weights(weightRadius, center, center, children.length - 1);
 			
-			children[0].setBounds(fRadius - half - BORDER_WIDTH, fRadius - half - BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH);
-			
-			for (int i= 0; i < children.length - 1; i++) {
-				children[i + 1].setBounds(locations[2*i], locations[2*i + 1], ANNOTATION_SIZE + 2*BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH);
+			if (fUseCenterPosition) {
+				children[0].setBounds(fRadius - half - BORDER_WIDTH, fRadius - half - BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH);
+				
+				for (int i= 0; i < children.length - 1; i++) {
+					children[i + 1].setBounds(locations[2*i], locations[2*i + 1], ANNOTATION_SIZE + 2*BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH);
+				}
+			} else {
+				for (int i= 0; i < children.length; i++) {
+					children[i].setBounds(locations[2*i], locations[2*i + 1], ANNOTATION_SIZE + 2*BORDER_WIDTH, ANNOTATION_SIZE + 2*BORDER_WIDTH);
+				}
 			}
 			
 		}
 		
 	}
-	private static final int ANNOTATION_SIZE= 15;
+	private static final int ANNOTATION_SIZE= 14;
 	private static final int BORDER_WIDTH= 2;
 	
 	
 	private int fRadius= 67;
+	private boolean fUseCenterPosition;
+	
+	public CircularLayouter(boolean useCenterPosition) {
+		fUseCenterPosition= useCenterPosition;
+	}
 
 	public Layout getLayout(int itemCount) {
 		return new RadialLayout(fRadius);
@@ -94,15 +103,20 @@ public class CircularLayouter implements IExpansionLayouter {
 	 * @see org.eclipse.ui.internal.texteditor.IExpansionLayouter#getShellRegion()
 	 */
 	public Region getShellRegion(int itemCount) {
-		int items= itemCount -1;
-		int circumference= (int) (items * (ANNOTATION_SIZE + BORDER_WIDTH) * 3);
+		int items= fUseCenterPosition ? itemCount - 1 : itemCount;
+		int circumference= (int) (items * (ANNOTATION_SIZE + BORDER_WIDTH) * 3.0);
 		fRadius= (int) (circumference / (2 * Math.PI));
 		fRadius= (int) Math.max(fRadius, 2.5 * (ANNOTATION_SIZE + BORDER_WIDTH));
+		if (items == 0)
+			fRadius= (int) (1.2 * ANNOTATION_SIZE);
 		
 		Region region = new Region();
 		// diameter is itemCount 
 		region.add(circle(fRadius, fRadius, fRadius));
 //		region.subtract(circle((int) (fRadius / 2.5), fRadius, fRadius));
+		
+		// we could also cut away the unneeded sector
+		
 		return region;
 	}
 

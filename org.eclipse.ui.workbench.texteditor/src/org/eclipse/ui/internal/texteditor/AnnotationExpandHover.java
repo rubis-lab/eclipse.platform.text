@@ -35,6 +35,7 @@ import org.eclipse.jface.text.ITextViewerExtension3;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationBarHoverManager;
 import org.eclipse.jface.text.source.IAnnotationHover;
 import org.eclipse.jface.text.source.IAnnotationHoverExtension;
 import org.eclipse.jface.text.source.IAnnotationHoverExtension2;
@@ -54,15 +55,16 @@ import org.eclipse.ui.internal.texteditor.AnnotationExpansionControl.AnnotationH
  * @since 3.0
  */
 public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHoverExtension, IAnnotationHoverExtension2 {
-
 	private static class InformationControlCreator implements IInformationControlCreator, IInformationControlCreatorExtension {
 
 		/*
 		 * @see org.eclipse.jface.text.IInformationControlCreator#createInformationControl(org.eclipse.swt.widgets.Shell)
 		 */
 		public IInformationControl createInformationControl(Shell parent) {
-//			return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
-			return new AnnotationExpansionControl(parent, SWT.NO_TRIM, new CircularLayouter());
+			if (AnnotationBarHoverManager.USE_RADIAL_LAYOUT)
+				return new AnnotationExpansionControl(parent, SWT.NO_TRIM, new CircularLayouter(true));
+			else
+				return new AnnotationExpansionControl(parent, SWT.NO_TRIM | SWT.BORDER);
 		}
 
 		/*
@@ -141,7 +143,7 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 			}
 		}
 		
-		if (exact.size() <= 1)
+		if (exact.size() < 1)
 			return null;
 		
 		sort(exact, model);
