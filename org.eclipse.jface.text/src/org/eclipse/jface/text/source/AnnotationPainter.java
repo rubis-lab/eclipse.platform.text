@@ -200,6 +200,14 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 					Object annotationType= fAnnotationAccess.getType(annotation);
 					if (annotationType == null)
 						continue;
+					
+					AnnotationPresentation presentation= null;
+					if (fAnnotationAccess instanceof IAnnotationAccessExtension) {
+						IAnnotationAccessExtension extension= (IAnnotationAccessExtension) fAnnotationAccess;
+						presentation= extension.getAnnotationPresentation(annotation);
+					}
+					if (presentation == null)
+						continue;
 						
 					Color color= null;
 					boolean isHighlighting= fHighlightAnnotationTypes.contains(annotationType);
@@ -216,7 +224,7 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 						pp.fPosition= position;
 						pp.fColor= color;
 						pp.fMultiLine= fAnnotationAccess.isMultiLine(annotation);
-						pp.fLayer= annotation.getLayer();
+						pp.fLayer= presentation.getLayer();
 						
 						if (isDrawingSquiggles)
 							fDecorations.add(pp);
