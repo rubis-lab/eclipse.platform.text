@@ -40,6 +40,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
@@ -55,28 +56,38 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 
 import org.eclipse.jface.text.ITextSelection;
 
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.help.WorkbenchHelp;
 import org.eclipse.ui.model.IWorkbenchAdapter;
 
+import org.eclipse.search.ui.IReplacePage;
 import org.eclipse.search.ui.ISearchPage;
 import org.eclipse.search.ui.ISearchPageContainer;
 import org.eclipse.search.ui.ISearchResultViewEntry;
 import org.eclipse.search.ui.SearchUI;
 
+import org.eclipse.search.internal.core.text.TextSearchJob;
 import org.eclipse.search.internal.core.text.TextSearchScope;
 import org.eclipse.search.internal.ui.ISearchHelpContextIds;
 import org.eclipse.search.internal.ui.ScopePart;
 import org.eclipse.search.internal.ui.SearchMessages;
 import org.eclipse.search.internal.ui.SearchPlugin;
+import org.eclipse.search.internal.ui.SearchResultView;
+import org.eclipse.search.internal.ui.WorkInProgressPreferencePage;
 import org.eclipse.search.internal.ui.util.ExceptionHandler;
 import org.eclipse.search.internal.ui.util.FileTypeEditor;
 import org.eclipse.search.internal.ui.util.RowLayouter;
 import org.eclipse.search.internal.ui.util.SWTUtil;
 
-public class TextSearchPage extends DialogPage implements ISearchPage {
+import org.eclipse.search2.ui.ISearchJob;
+import org.eclipse.search2.ui.text.ITextSearchResult;
+import org.eclipse.search2.ui.text.TextSearchResultFactory;
+
+public class TextSearchPage extends DialogPage implements ISearchPage, IReplacePage {
 
 	public static final String EXTENSION_POINT_ID= "org.eclipse.search.internal.ui.text.TextSearchPage"; //$NON-NLS-1$
 
@@ -122,8 +133,50 @@ public class TextSearchPage extends DialogPage implements ISearchPage {
 	//---- Action Handling ------------------------------------------------
 	
 	public boolean performAction() {
-		
-		SearchUI.activateSearchResultView();
+		if (WorkInProgressPreferencePage.useNewSearch())
+			return performNewSearch();
+		else
+			return performOldSearch();
+	}
+	
+	private boolean performOldSearch() {
+				
+		TextSearchOperation op = createTextSearchOperation();
+			
+		return runOperation(op);
+	}
+	
+	private boolean runOperation(final TextSearchOperation op) {
+		IRunnableContext context=  null;
+		context= getContainer().getRunnableContext();
+			
+		Shell shell= fPattern.getShell();
+		if (context == null)
+			context= new ProgressMonitorDialog(shell);
+
+		try {			
+			context.run(true, true, op);
+		} catch (InvocationTargetException ex) {
+			if (ex.getTargetException() instanceof PatternSyntaxException)
+				showRegExSyntaxError((PatternSyntaxException)ex.getTargetException());
+			else
+				ExceptionHandler.handle(ex, SearchMessages.getString("Search.Error.search.title"),SearchMessages.getString("Search.Error.search.message")); //$NON-NLS-2$ //$NON-NLS-1$
+			return false;
+		} catch (InterruptedException e) {
+			return false;
+		}
+		IStatus status= op.getStatus();
+		if (status != null && !status.isOK()) {
+			String title= SearchMessages.getString("Search.Problems.title"); //$NON-NLS-1$
+			ErrorDialog.openError(getShell(), title, null, status); //$NON-NLS-1$
+			return false;
+		}
+
+		return true;
+	}
+
+	
+	private TextSearchOperation createTextSearchOperation() {
 		
 		SearchPatternData patternData= getPatternData();
 		if (patternData.fileNamePatterns == null || fExtensions.getText().length() <= 0) {
@@ -150,41 +203,74 @@ public class TextSearchPage extends DialogPage implements ISearchPage {
 		}		
 		scope.addExtensions(patternData.fileNamePatterns);
 
+		SearchUI.activateSearchResultView();
 		TextSearchResultCollector collector= new TextSearchResultCollector();
 		
-		TextSearchOperation op= new TextSearchOperation(
+		final TextSearchOperation op= new TextSearchOperation(
 			SearchPlugin.getWorkspace(),
 			patternData.textPattern,
 			getSearchOptions(),
 			scope,
 			collector);
-			
-		IRunnableContext context=  null;
-		context= getContainer().getRunnableContext();
-			
-		Shell shell= fPattern.getShell();
-		if (context == null)
-			context= new ProgressMonitorDialog(shell);
+		return op;
+	}
 
-		try {			
-			context.run(true, true, op);
-		} catch (InvocationTargetException ex) {
-			if (ex.getTargetException() instanceof PatternSyntaxException)
-				showRegExSyntaxError((PatternSyntaxException)ex.getTargetException());
-			else
-				ExceptionHandler.handle(ex, SearchMessages.getString("Search.Error.search.title"),SearchMessages.getString("Search.Error.search.message")); //$NON-NLS-2$ //$NON-NLS-1$
+	/* (non-Javadoc)
+	 * @see org.eclipse.search.ui.IReplacePage#performReplace()
+	 */
+	public boolean performReplace() {
+		final TextSearchOperation op= createTextSearchOperation();
+		
+		if (!runOperation(op))
 			return false;
-		} catch (InterruptedException e) {
-			return false;
-		}
-		IStatus status= op.getStatus();
-		if (status != null && !status.isOK()) {
-			String title= SearchMessages.getString("Search.Problems.title"); //$NON-NLS-1$
-			ErrorDialog.openError(getShell(), title, null, status); //$NON-NLS-1$
-		}		
+		
+		Display.getCurrent().asyncExec(new Runnable() {
+			public void run() {
+				SearchResultView view= (SearchResultView) SearchPlugin.getSearchResultView();
+				new ReplaceDialog(SearchPlugin.getSearchResultView().getViewSite().getShell(), (List) view.getViewer().getInput(), op).open();
+			}
+		});
 		return true;
 	}
+
+	private boolean performNewSearch() {
+		org.eclipse.search2.ui.NewSearchUI.activateSearchResultView();
+		
+		SearchPatternData patternData= getPatternData();
+		if (patternData.fileNamePatterns == null || fExtensions.getText().length() <= 0) {
+			patternData.fileNamePatterns= new HashSet(1);
+			patternData.fileNamePatterns.add("*"); //$NON-NLS-1$
+		}
 	
+		// Setup search scope
+		TextSearchScope scope= null;
+		switch (getContainer().getSelectedScope()) {
+			case ISearchPageContainer.WORKSPACE_SCOPE:
+				scope= TextSearchScope.newWorkspaceScope();
+				break;
+			case ISearchPageContainer.SELECTION_SCOPE:
+				scope= getSelectedResourcesScope(false);
+				break;
+			case ISearchPageContainer.SELECTED_PROJECTS_SCOPE:
+				scope= getSelectedResourcesScope(true);
+				break;
+			case ISearchPageContainer.WORKING_SET_SCOPE:
+				IWorkingSet[] workingSets= getContainer().getSelectedWorkingSets();
+				String desc= SearchMessages.getFormattedString("WorkingSetScope", ScopePart.toString(workingSets)); //$NON-NLS-1$
+				scope= new TextSearchScope(desc, workingSets);
+		}		
+		scope.addExtensions(patternData.fileNamePatterns);
+	
+			
+		ITextSearchResult search= TextSearchResultFactory.createTextSearchResult(new ResourceStructureProvider(), new FilePresentationFactory()	, new FileSearchDesription(patternData.textPattern, scope.getDescription()));
+		org.eclipse.search2.ui.NewSearchUI.getSearchManager().addSearchResult(search);
+		
+		ISearchJob wsJob= new TextSearchJob(search, scope, getSearchOptions(), patternData.textPattern, "Searching for "+patternData.textPattern);
+		org.eclipse.search2.ui.NewSearchUI.runSearchInBackground(search, wsJob);
+	
+		return true;
+	}
+
 	private void showRegExSyntaxError(PatternSyntaxException ex) {
 		String title= SearchMessages.getString("SearchPage.regularExpressionSyntaxProblem.title"); //$NON-NLS-1$
 		MessageDialog.openInformation(getShell(), title, ex.getLocalizedMessage());
@@ -608,6 +694,9 @@ public class TextSearchPage extends DialogPage implements ISearchPage {
 					scope.add(resource);
 				}
 			}
+		} else if (isProjectScope) {
+			IProject editorProject= getEditorProject();
+			if (editorProject != null)scope.add(editorProject);
 		}
 		if (isProjectScope) {
 			if (elementCount > 1)
@@ -620,6 +709,17 @@ public class TextSearchPage extends DialogPage implements ISearchPage {
 		return scope;
 	}
 
+	private IProject getEditorProject() {
+		IWorkbenchPart activePart= SearchPlugin.getActivePage().getActivePart();
+		if (activePart instanceof IEditorPart) {
+			IEditorPart editor= (IEditorPart) activePart;
+			IEditorInput input= editor.getEditorInput();
+			if (input instanceof IFileEditorInput) {
+				return ((IFileEditorInput)input).getFile().getProject();
+			}
+		}
+		return null;
+	}
 	//--------------- Configuration handling --------------
 	
 	/**

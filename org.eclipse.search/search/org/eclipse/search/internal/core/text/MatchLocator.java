@@ -43,7 +43,6 @@ public class MatchLocator {
 		fIsRegEx= options.indexOf('r') != -1;
 		if (!isRegExSearch())
 			pattern= asRegEx(pattern);
-		
 		if (options.indexOf('i') != -1)
 			regExPattern= Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
 		else
@@ -181,9 +180,9 @@ public class MatchLocator {
 		}
 		return -1;
 	}
-
+	
 	public boolean isRegExSearch() {
 		return fIsRegEx;
-	}
+}
 	
 }

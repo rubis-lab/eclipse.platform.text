@@ -53,8 +53,8 @@ import org.eclipse.jface.viewers.TableViewer;
 
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IMemento;
-import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionContext;
+import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.actions.ActionGroup;
 import org.eclipse.ui.help.WorkbenchHelp;
 
@@ -133,7 +133,7 @@ public class SearchResultViewer extends TableViewer {
 		fSearchAgainAction.setEnabled(hasSearchOperation);
 		fSortDropDownAction = new SortDropDownAction(this);
 		fSortDropDownAction.setEnabled(getItemCount() > 0);
-		fSearchDropDownAction= new SearchDropDownAction(this);
+		fSearchDropDownAction= new SearchDropDownAction();
 		fSearchDropDownAction.setEnabled(hasSearch);
 		fCopyToClipboardAction= new CopyToClipboardAction(this);
 
@@ -171,8 +171,8 @@ public class SearchResultViewer extends TableViewer {
 		
 		IActionBars actionBars= fOuterPart.getViewSite().getActionBars();
 		if (actionBars != null) {
-			actionBars.setGlobalActionHandler(IWorkbenchActionConstants.NEXT, fShowNextResultAction);
-			actionBars.setGlobalActionHandler(IWorkbenchActionConstants.PREVIOUS, fShowPreviousResultAction);
+			actionBars.setGlobalActionHandler(ActionFactory.NEXT.getId(), fShowNextResultAction);
+			actionBars.setGlobalActionHandler(ActionFactory.PREVIOUS.getId(), fShowPreviousResultAction);
 		}
 
 		fOuterPart.getSite().setSelectionProvider(this);
@@ -270,7 +270,7 @@ public class SearchResultViewer extends TableViewer {
 		updateTitle();
 		enableActions();
 		if (getItemCount() > 0)
-			selectResult(getTable(), 0);
+			selectResult(0);
 
 		WorkbenchHelp.setHelp(getControl(), SearchPlugin.getDefault().getSearchViewHelpContextId());
 	}
@@ -483,7 +483,7 @@ public class SearchResultViewer extends TableViewer {
 			}
 			fMarkerToShow= 0;
 			entry= (SearchResultViewEntry)getTable().getItem(index).getData();
-			selectResult(table, index);
+			selectResult(index);
 		}
 		entry.setSelectedMarkerIndex(fMarkerToShow);
 		openCurrentSelection();
@@ -520,7 +520,7 @@ public class SearchResultViewer extends TableViewer {
 			}
 			entry= (SearchResultViewEntry)getTable().getItem(index).getData();
 			fMarkerToShow= entry.getMatchCount() - 1;
-			selectResult(table, index);
+			selectResult(index);
 		}
 		entry.setSelectedMarkerIndex(fMarkerToShow);
 		openCurrentSelection();
@@ -533,7 +533,7 @@ public class SearchResultViewer extends TableViewer {
 		return true;			
 	}
 		
-	private void selectResult(Table table, int index) {
+	private void selectResult(int index) {
 		fHandleSelectionChangedEvents= false;
 		Object element= getElementAt(index);
 		if (element != null)
@@ -580,7 +580,7 @@ public class SearchResultViewer extends TableViewer {
 	 */
 	protected void clearTitle() {
 		String title= SearchMessages.getString("SearchResultView.title"); //$NON-NLS-1$
-		if (title == null || !title.equals(fOuterPart.getTitle()))
+		if (!title.equals(fOuterPart.getTitle()))
 			fOuterPart.setTitle(title);
 	}
 
@@ -716,6 +716,13 @@ public class SearchResultViewer extends TableViewer {
 		getTable().setRedraw(false);
 		super.internalRefresh(element, updateLabels);
 		getTable().setRedraw(true);
+	}
+
+	void handleAllSearchesRemoved() {
+		setContextMenuTarget(null);
+		setActionGroupFactory(null);
+		setInput(null);
+		fSearchDropDownAction.clear();
 	}
 
 }
