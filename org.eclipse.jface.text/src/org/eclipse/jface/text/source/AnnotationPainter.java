@@ -34,6 +34,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.IPainter;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextInputListener;
 import org.eclipse.jface.text.ITextPresentationListener;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension3;
@@ -102,7 +103,17 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * The range in which all highlight annotations can be found.
 	 * @since 3.0
 	 */
-	private Position fHighlightAnnotationRange= new Position(0);
+	private Position fHighlightAnnotationRange= new Position(Integer.MAX_VALUE);
+	/**
+	 * The text input listener.
+	 * @since 3.0
+	 */
+	private ITextInputListener fTextInputListener;
+	/**
+	 * Flag which tells that a new document input is currently being set.
+	 * @since 3.0
+	 */
+	private boolean fInputDocumentAboutToBeChanged;
 
 	
 	/**
@@ -167,11 +178,13 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 				fModel.removeAnnotationModelListener(this);
 			fModel= model;
 			if (fModel != null) {
-				try {
-					fIsSettingModel= true;
-					fModel.addAnnotationModelListener(this);
-				} finally {
-					fIsSettingModel= false;
+				synchronized(this) {
+					try {
+						fIsSettingModel= true;
+						fModel.addAnnotationModelListener(this);
+					} finally {
+						fIsSettingModel= false;
+					}
 				}
 			}
 		}
@@ -230,9 +243,12 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 						}
 					}
 				}
-				if (!fHighlightedDecorations.isEmpty()) {
-					fHighlightAnnotationRange.offset= highlightAnnotationRangeStart;
-					fHighlightAnnotationRange.length= highlightAnnotationRangeEnd - highlightAnnotationRangeStart;
+				if (highlightAnnotationRangeStart != Integer.MAX_VALUE) {
+					int end= Math.max(fHighlightAnnotationRange.offset + fHighlightAnnotationRange.length, highlightAnnotationRangeEnd);
+					end= Math.min(end, fSourceViewer.getDocument().getLength());
+					fHighlightAnnotationRange.offset= Math.min(fHighlightAnnotationRange.offset, highlightAnnotationRangeStart);
+					fHighlightAnnotationRange.offset= Math.min(fHighlightAnnotationRange.offset, fSourceViewer.getDocument().getLength());
+					fHighlightAnnotationRange.length= end - fHighlightAnnotationRange.offset; 
 				}
 			}
 		}
@@ -246,42 +262,57 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 		
 		catchupWithModel();
 		
-		invalidateTextPresentation();
+		if (!fInputDocumentAboutToBeChanged)
+			invalidateTextPresentation();
 		
 		enablePainting();
 	}
 
 	private void invalidateTextPresentation() {
 		if (fSourceViewer instanceof ITextViewerExtension2) {
-			IRegion r= getWidgetRange(fHighlightAnnotationRange);
-			if (r != null)
-				((ITextViewerExtension2)fSourceViewer).invalidateTextPresentation(r.getOffset(), r.getLength());
+			IRegion r;
+			if (fHighlightAnnotationRange != null && fHighlightAnnotationRange.getOffset() != Integer.MAX_VALUE)
+				r= new Region(fHighlightAnnotationRange.getOffset(), fHighlightAnnotationRange.getLength());
+			else
+				r= fSourceViewer.getVisibleRegion();
+			
+			((ITextViewerExtension2)fSourceViewer).invalidateTextPresentation(r.getOffset(), r.getLength());
+
 		} else {
 			fSourceViewer.invalidateTextPresentation();
 		}
 	}
 
 	/*
-	 * @see ITextPresentationListener#applyTextPresentation(TextPresentation, IRegion)
+	 * @see ITextPresentationListener#applyTextPresentation(TextPresentation)
 	 * @since 3.0
 	 */
-	public synchronized void applyTextPresentation(TextPresentation tp, IRegion region) {
-		for (Iterator iter= fHighlightedDecorations.iterator(); iter.hasNext();) {
+	public synchronized void applyTextPresentation(TextPresentation tp) {
+		IRegion region= tp.getExtent();
 
-			Decoration pp = (Decoration)iter.next();
-			Position p= pp.fPosition;
-			if (!fSourceViewer.overlapsWithVisibleRegion(p.offset, p.length))
-				continue;
-
-			if (p.getOffset() + p.getLength() >= region.getOffset() && region.getOffset() + region.getLength() > p.getOffset())
-				tp.mergeStyleRange(new StyleRange(p.getOffset(), p.getLength(), null, pp.fColor));
+		for (int layer= 0, maxLayer= 1;	layer < maxLayer; layer++) {
+			
+			for (Iterator iter= fHighlightedDecorations.iterator(); iter.hasNext();) {
+					
+				Decoration pp = (Decoration)iter.next();
+					maxLayer= Math.max(maxLayer, pp.fLayer + 1); // dynamically update layer maximum
+					if (pp.fLayer != layer)	// wrong layer: skip annotation
+						continue;
+				
+				Position p= pp.fPosition;
+				if (!fSourceViewer.overlapsWithVisibleRegion(p.offset, p.length))
+					continue;
+	
+				if (p.getOffset() + p.getLength() >= region.getOffset() && region.getOffset() + region.getLength() > p.getOffset())
+					tp.mergeStyleRange(new StyleRange(p.getOffset(), p.getLength(), null, pp.fColor));
+			}
 		}
 	}
 	
 	/*
 	 * @see IAnnotationModelListener#modelChanged(IAnnotationModel)
 	 */
-	public void modelChanged(final IAnnotationModel model) {
+	public synchronized void modelChanged(final IAnnotationModel model) {
 		if (fTextWidget != null && !fTextWidget.isDisposed()) {
 			if (fIsSettingModel) {
 				// inside the ui thread -> no need for posting
@@ -334,7 +365,23 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 */
 	public void addHighlightAnnotationType(Object annotationType) {
 		fHighlightAnnotationTypes.add(annotationType);
-	
+		if (fTextInputListener == null) {
+			fTextInputListener= new ITextInputListener() {
+				/*
+				 * @see org.eclipse.jface.text.ITextInputListener#inputDocumentAboutToBeChanged(org.eclipse.jface.text.IDocument, org.eclipse.jface.text.IDocument)
+				 */
+				public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
+					fInputDocumentAboutToBeChanged= true;
+				}
+				/*
+				 * @see org.eclipse.jface.text.ITextInputListener#inputDocumentChanged(org.eclipse.jface.text.IDocument, org.eclipse.jface.text.IDocument)
+				 */
+				public void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
+					fInputDocumentAboutToBeChanged= false;
+				}
+			};
+			fSourceViewer.addTextInputListener(fTextInputListener);
+		}
 	}
 	
 	/**
@@ -358,6 +405,11 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 */
 	public void removeHighlightAnnotationType(Object annotationType) {
 		fHighlightAnnotationTypes.remove(annotationType);
+		if (fHighlightAnnotationTypes.isEmpty() && fTextInputListener != null) {
+			fSourceViewer.removeTextInputListener(fTextInputListener);
+			fTextInputListener= null;
+			fInputDocumentAboutToBeChanged= false;
+		}
 	}
 	
 	/**
@@ -367,6 +419,10 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	public void removeAllAnnotationTypes() {
 		fAnnotationTypes.clear();
 		fHighlightAnnotationTypes.clear();
+		if (fTextInputListener != null) {
+			fSourceViewer.removeTextInputListener(fTextInputListener);
+			fTextInputListener= null;
+		}
 	}
 	
 	/**
@@ -498,7 +554,7 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	 * @return the corresponding widget region
 	 */
 	private IRegion getWidgetRange(Position p) {
-		if (p == null)
+		if (p == null || p.offset == Integer.MAX_VALUE)
 			return null;
 		
 		if (fSourceViewer instanceof ITextViewerExtension3) {

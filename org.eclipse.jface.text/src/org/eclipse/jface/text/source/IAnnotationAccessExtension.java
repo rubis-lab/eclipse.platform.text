@@ -63,7 +63,7 @@ public interface IAnnotationAccessExtension {
 	void paint(Annotation annotation, GC gc, Canvas canvas, Rectangle bounds);
 	
 	/**
-	 * Returns the text associated with the given annoattion.
+	 * Returns the text associated with the given annotation.
 	 * 
 	 * @return the text associated with the given annotation or <code>null</code> if none
 	 */

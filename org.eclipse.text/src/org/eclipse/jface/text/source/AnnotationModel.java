@@ -521,9 +521,6 @@ public class AnnotationModel implements IAnnotationModel, IAnnotationModelExtens
 						fireModelChanged();
 				}
 				
-				// TODO check whether this is OK
-				annotation.fireAnnotationChanged();
-				
 			} else {
 				try {
 					addAnnotation(annotation, position, fireModelChanged);

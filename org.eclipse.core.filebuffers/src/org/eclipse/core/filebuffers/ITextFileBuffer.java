@@ -12,7 +12,6 @@ package org.eclipse.core.filebuffers;
 
 
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.source.IAnnotationModel;
 
 /**
  * A text file buffer is a file buffer for text files.  The contents of a text file buffe is

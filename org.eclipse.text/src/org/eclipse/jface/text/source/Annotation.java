@@ -36,14 +36,9 @@ public class Annotation {
 	 */
 	public Annotation(String annotationType, boolean isPersistent) {
 		fType= annotationType;
+		fIsPersistent= isPersistent;
 	}
-	
-//	/**
-//	 * Creates a new annotation.
-//	 */
-//	public Annotation() {
-//	}
-	
+		
 	/**
 	 * Returns the annotation type of this annotation.
 	 * 

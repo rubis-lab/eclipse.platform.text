@@ -54,7 +54,7 @@ public class SourceViewerDecorationSupport {
 		 * @see IPropertyChangeListener#propertyChange(org.eclipse.jface.util.PropertyChangeEvent)
 		 */
 		public void propertyChange(PropertyChangeEvent event) {
-			if (fSymbolicFontName != null && fSymbolicFontName.equals(event.getProperty()))
+			if (fMarginPainter != null && fSymbolicFontName != null && fSymbolicFontName.equals(event.getProperty()))
 				fMarginPainter.initialize();
 		}
 	}
@@ -171,14 +171,15 @@ public class SourceViewerDecorationSupport {
 		while (e.hasNext()) {
 			Object type= e.next();
 			if (areAnnotationsShown(type))
-				showAnnotations(type, false);
+				showAnnotations(type, false, false);
 			else
-				hideAnnotations(type, false);
+				hideAnnotations(type, false, false);
 			if (areAnnotationsHighlighted(type))
-				showAnnotations(type, true);
+				showAnnotations(type, true, false);
 			else
-				hideAnnotations(type, true);
+				hideAnnotations(type, true, false);
 		}
+		updateAnnotationPainter();
 	}
 	
 	/**
@@ -338,7 +339,7 @@ public class SourceViewerDecorationSupport {
 			return;
 		}
 		
-		if (fCursorLinePainterEnableKey.equals(p)) {
+		if (fCursorLinePainterEnableKey != null && fCursorLinePainterEnableKey.equals(p)) {
 			if (isCursorLineShown())
 				showCursorLine();
 			else
@@ -346,7 +347,7 @@ public class SourceViewerDecorationSupport {
 			return;
 		}
 		
-		if (fCursorLinePainterColorKey.equals(p)) {
+		if (fCursorLinePainterColorKey != null && fCursorLinePainterColorKey.equals(p)) {
 			if (fCursorLinePainter != null) {
 				hideCursorLine();
 				showCursorLine();
@@ -354,7 +355,7 @@ public class SourceViewerDecorationSupport {
 			return;
 		}
 		
-		if (fMarginPainterEnableKey.equals(p)) {
+		if (fMarginPainterEnableKey != null && fMarginPainterEnableKey.equals(p)) {
 			if (isMarginShown())
 				showMargin();
 			else
@@ -362,7 +363,7 @@ public class SourceViewerDecorationSupport {
 			return;
 		}
 		
-		if (fMarginPainterColorKey.equals(p)) {
+		if (fMarginPainterColorKey != null && fMarginPainterColorKey.equals(p)) {
 			if (fMarginPainter != null) {
 				fMarginPainter.setMarginRulerColor(getColor(fMarginPainterColorKey));
 				fMarginPainter.paint(IPainter.CONFIGURATION);
@@ -370,7 +371,7 @@ public class SourceViewerDecorationSupport {
 			return;
 		}
 		
-		if (fMarginPainterColumnKey.equals(p)) {
+		if (fMarginPainterColumnKey != null && fMarginPainterColumnKey.equals(p)) {
 			if (fMarginPainter != null && fPreferenceStore != null) {
 				fMarginPainter.setMarginRulerColumn(fPreferenceStore.getInt(fMarginPainterColumnKey));
 				fMarginPainter.paint(IPainter.CONFIGURATION);
@@ -393,17 +394,17 @@ public class SourceViewerDecorationSupport {
 			
 			if (info.getTextPreferenceKey().equals(p)) {
 				if (areAnnotationsShown(info.getAnnotationType()))
-					showAnnotations(info.getAnnotationType(), false);
+					showAnnotations(info.getAnnotationType(), false, true);
 				else
-					hideAnnotations(info.getAnnotationType(), false);
+					hideAnnotations(info.getAnnotationType(), false, true);
 				return;
 			}
 			
 			if (info.getHighlightPreferenceKey() != null && info.getHighlightPreferenceKey().equals(p)) {
 				if (areAnnotationsHighlighted(info.getAnnotationType()))
-					showAnnotations(info.getAnnotationType(), true);
+					showAnnotations(info.getAnnotationType(), true, true);
 				else
-					hideAnnotations(info.getAnnotationType(), true);
+					hideAnnotations(info.getAnnotationType(), true, true);
 				return;
 			}
 			
@@ -545,7 +546,7 @@ public class SourceViewerDecorationSupport {
 	 * @return <code>true</code> f the cursor line is shown
 	 */
 	private boolean isCursorLineShown() {
-		if (fPreferenceStore != null)
+		if (fPreferenceStore != null && fCursorLinePainterEnableKey != null)
 			return fPreferenceStore.getBoolean(fCursorLinePainterEnableKey);
 		return false;
 	}
@@ -593,7 +594,7 @@ public class SourceViewerDecorationSupport {
 	 * @return <code>true</code> if the margin is shown
 	 */	
 	private boolean isMarginShown() {
-		if (fPreferenceStore != null)
+		if (fPreferenceStore != null && fMarginPainterEnableKey != null)
 			return fPreferenceStore.getBoolean(fMarginPainterEnableKey);
 		return false;
 	}
@@ -603,8 +604,9 @@ public class SourceViewerDecorationSupport {
 	 * 
 	 * @param annotationType the annotation type
 	 * @param highlighting <code>true</code> if highlighting <code>false</code> if painting squiggles
+	 * @param updatePainter if <code>true</code> update the annotation painter
 	 */
-	private void showAnnotations(Object annotationType, boolean highlighting) {
+	private void showAnnotations(Object annotationType, boolean highlighting, boolean updatePainter) {
 		if (fSourceViewer instanceof ITextViewerExtension2) {
 			if (fAnnotationPainter == null) {
 				fAnnotationPainter= new AnnotationPainter(fSourceViewer, fAnnotationAccess);
@@ -618,14 +620,20 @@ public class SourceViewerDecorationSupport {
 				fAnnotationPainter.addHighlightAnnotationType(annotationType);
 			else
 				fAnnotationPainter.addAnnotationType(annotationType);
-			fAnnotationPainter.paint(IPainter.CONFIGURATION);
+			
+			if (updatePainter)
+				updateAnnotationPainter();
 		}
 	}
 	
 	/**
-	 * Shuts down the annotation painter.
+	 * Updates the annotation painter.
 	 */
-	private void shutdownAnnotationPainter() {
+	private void updateAnnotationPainter() {
+		if (fAnnotationPainter == null)
+			return;
+		
+		fAnnotationPainter.paint(IPainter.CONFIGURATION);
 		if (!fAnnotationPainter.isPaintingAnnotations()) {
 			if (fSourceViewer instanceof ITextViewerExtension2) {
 				ITextViewerExtension2 extension= (ITextViewerExtension2) fSourceViewer;
@@ -637,8 +645,6 @@ public class SourceViewerDecorationSupport {
 			fAnnotationPainter.deactivate(true);
 			fAnnotationPainter.dispose();
 			fAnnotationPainter= null;
-		} else {
-			fAnnotationPainter.paint(IPainter.CONFIGURATION);
 		}
 	}
 
@@ -647,16 +653,19 @@ public class SourceViewerDecorationSupport {
 	 * 
 	 * @param annotationType the annotation type
 	 * @param highlighting <code>true</code> if highlighting <code>false</code> if painting squiggles
+	 * @param updatePainter if <code>true</code> update the annotation painter
 	 * @since 3.0
 	 */
-	private void hideAnnotations(Object annotationType, boolean highlighting) {
+	private void hideAnnotations(Object annotationType, boolean highlighting, boolean updatePainter) {
 		if (fAnnotationPainter != null) {
 			if (highlighting)
 				fAnnotationPainter.removeHighlightAnnotationType(annotationType);
 			else
 				fAnnotationPainter.removeAnnotationType(annotationType);
-			fAnnotationPainter.paint(IPainter.CONFIGURATION);
-			shutdownAnnotationPainter();
+			
+			if (updatePainter) {
+				updateAnnotationPainter();
+			}
 		}
 	}
 	
@@ -698,12 +707,10 @@ public class SourceViewerDecorationSupport {
 	 * @return <code>true</code> if the annotation overview is shown
 	 */	
 	private boolean isAnnotationOverviewShown(Object annotationType) {
-		if (fPreferenceStore != null) {
-			if (fOverviewRuler != null) {
-				AnnotationPreference info= (AnnotationPreference) fAnnotationTypeKeyMap.get(annotationType);
-				if (info != null)
-					return fPreferenceStore.getBoolean(info.getOverviewRulerPreferenceKey());
-			}
+		if (fPreferenceStore != null && fOverviewRuler != null) {
+			AnnotationPreference info= (AnnotationPreference) fAnnotationTypeKeyMap.get(annotationType);
+			if (info != null)
+				return fPreferenceStore.getBoolean(info.getOverviewRulerPreferenceKey());
 		}
 		return false;
 	}

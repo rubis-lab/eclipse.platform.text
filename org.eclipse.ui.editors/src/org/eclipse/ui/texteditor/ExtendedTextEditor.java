@@ -495,7 +495,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 */
 	protected boolean isPrefQuickDiffAlwaysOn() {
 		IPreferenceStore store= getPreferenceStore();
-		return store == null ? store.getBoolean(ExtendedTextEditorPreferenceConstants.QUICK_DIFF_ALWAYS_ON) : false;
+		return store != null ? store.getBoolean(ExtendedTextEditorPreferenceConstants.QUICK_DIFF_ALWAYS_ON) : false;
 	}
 	
 	/**
@@ -676,7 +676,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 						AnnotationPreference preference= (AnnotationPreference)iter2.next();
 						String key= preference.getVerticalRulerPreferenceKey();
 						boolean showAnnotation= true;
-						if (key != null)
+						if (key != null && store.contains(key))
 							showAnnotation= store.getBoolean(key);
 						if (showAnnotation)
 							fAnnotationRulerColumn.addAnnotationType(preference.getAnnotationType());

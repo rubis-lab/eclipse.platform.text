@@ -13,8 +13,10 @@ package org.eclipse.ui.texteditor;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResourceStatus;
@@ -59,6 +61,44 @@ import org.eclipse.ui.internal.editors.text.EditorsPlugin;
  * </p>
  */
 public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
+	
+	
+	/**
+	 * Temporary class. Will change when this information is read out 
+	 * from an extension point.
+	 * 
+	 * TODO read from extension point
+	 */
+	static class AnnotationTypeMapping {
+		
+		private String fMarkerType;
+		private String[] fAnnotationTypes;
+		
+		public AnnotationTypeMapping(String markerType, String[] annotationTypes) {
+			fMarkerType= markerType;
+			fAnnotationTypes= annotationTypes;
+		}
+		
+		public AnnotationTypeMapping(String markerType, String annotationType) {
+			this(markerType, new String[] { annotationType });
+		}
+		
+		public String getMarkerType() {
+			return fMarkerType;
+		}
+		
+		public String getAnnotationType(IMarker marker) {
+			try {
+				if (fMarkerType.equalsIgnoreCase(marker.getType()))
+					return fAnnotationTypes[MarkerUtilities.getSeverity(marker)];
+			} catch (CoreException x) {
+			} catch (ArrayIndexOutOfBoundsException x) {
+			}
+			return null;
+		}
+	}
+	
+	
 
 	/** List of annotations whose text range became invalid because of document changes */
 	private List fDeletedAnnotations= new ArrayList(2);
@@ -66,6 +106,10 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 	private List fInstantiatedMarkerUpdaters= null;
 	/** List of registered but not yet instantiated marker updaters */
 	private List fMarkerUpdaterSpecifications= null;
+	/**
+	 * Map of <code>AnnotationTypeMappings</code>.
+	 */
+	private Map fAnnotationTypeMappings;
 	
 	
 	/**
@@ -148,7 +192,73 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 	 */
 	protected MarkerAnnotation createMarkerAnnotation(IMarker marker) {
 		String annotationType= computeAnnotationType(marker);
-		return new MarkerAnnotation(annotationType, marker);
+		if (annotationType != null)
+			return new MarkerAnnotation(annotationType, marker);
+		return null;
+	}
+
+	/**
+	 * Determines the annotation type for the given marker.
+	 * 
+	 * @param marker the marker for which to determine the annotation type
+	 * @return the annotation type for an annotation for the given marker
+	 */
+	protected String computeAnnotationType(IMarker marker) {
+		
+		String markerType= null;
+		try {
+			markerType= marker.getType();
+		} catch (CoreException x) {
+			handleCoreException(x, "could not compute annotation type");
+			return null;
+		}
+		
+		String annotationType= getAnnotationType(marker, markerType);
+		if (annotationType != null)
+			return annotationType;
+		
+		String[] superTypes= MarkerUtilities.getSuperTypes(markerType);
+		for (int i= 0; i < superTypes.length; i++) {
+			annotationType= getAnnotationType(marker, superTypes[i]);
+			if (annotationType != null)
+				return annotationType;
+		}
+		
+		return null;
+	}
+	
+	protected String getAnnotationType(IMarker marker, String markerType) {
+		Map map= getAnnotationTypeMappings();
+		AnnotationTypeMapping mapping= (AnnotationTypeMapping) map.get(markerType);
+		if (mapping != null)
+			return mapping.getAnnotationType(marker);
+		return null;
+	}
+	
+	protected Map getAnnotationTypeMappings() {
+		if (fAnnotationTypeMappings == null) {
+			fAnnotationTypeMappings= new HashMap();
+			initializeAnnotationTypeMappings();
+		}
+		return fAnnotationTypeMappings;
+	}
+
+	/**
+	 * Initializes the annotation type mappings.
+	 * TODO will be replaced with extension point based mapping
+	 */
+	private void initializeAnnotationTypeMappings() {
+		String[] types= new String[] {
+			"org.eclipse.ui.workbench.texteditor.info",
+			"org.eclipse.ui.workbench.texteditor.warning",
+			"org.eclipse.ui.workbench.texteditor.error"
+		};
+		AnnotationTypeMapping m= new AnnotationTypeMapping("org.eclipse.core.resources.problemmarker", types);
+		fAnnotationTypeMappings.put(m.getMarkerType(), m);
+		m= new AnnotationTypeMapping("org.eclipse.core.resources.taskmarker", "org.eclipse.ui.workbench.texteditor.task");
+		fAnnotationTypeMappings.put(m.getMarkerType(), m);
+		m= new AnnotationTypeMapping("org.eclipse.core.resources.bookmark", "org.eclipse.ui.workbench.texteditor.bookmark");
+		fAnnotationTypeMappings.put(m.getMarkerType(), m);
 	}
 
 	/**
@@ -219,7 +329,9 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 			Position p= createPositionFromMarker(marker);
 			if (p != null)
 				try {
-					addAnnotation(createMarkerAnnotation(marker), p, false);
+					MarkerAnnotation annotation= createMarkerAnnotation(marker);
+					if (annotation != null)
+						addAnnotation(annotation, p, false);
 				} catch (BadLocationException e) {
 					// ignore invalid position
 				}
@@ -312,8 +424,12 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 		MarkerAnnotation a= getMarkerAnnotation(marker);
 		if (a != null) {
 			Position p= createPositionFromMarker(marker);
-			if (p != null)
+			if (p != null) {
+				String annotationType= computeAnnotationType(marker);
+				if (!a.getAnnotationType().equals(annotationType))
+					a.setAnnotationType(annotationType);
 				modifyAnnotation(a, p);
+			}
 		}
 	}
 
