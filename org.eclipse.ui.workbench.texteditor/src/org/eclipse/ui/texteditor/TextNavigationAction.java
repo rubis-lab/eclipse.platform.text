@@ -256,4 +256,12 @@ public class TextNavigationAction implements IAction {
 	 */
 	public void setToolTipText(String text) {
 	}
+	/* (non-Javadoc)
+	 * @see org.eclipse.jface.action.IAction#isThreadSafe()
+	 */
+	public boolean isThreadSafe() {
+		// XXX Auto-generated method stub
+		return false;
+	}
+
 }
