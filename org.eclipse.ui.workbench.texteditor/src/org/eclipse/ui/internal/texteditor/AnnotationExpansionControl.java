@@ -117,10 +117,14 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			// set the selection
 			fSelection= this;
 			
+			if (fHoverManager != null)
+				fHoverManager.showInformation();
+			
 			if (fInput.fAnnotationListener != null) {
 				AnnotationEvent event= new AnnotationEvent(fAnnotation);
 				fInput.fAnnotationListener.annotationSelected(event);
 			}
+
 		}
 		
 		public void defaultSelected() {
@@ -141,7 +145,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 
 		public void deselect() {
 			// hide the popup
-			fHoverManager.disposeInformationControl();
+//			fHoverManager.disposeInformationControl();
 			
 			// deselect
 			fSelection= null;
@@ -276,7 +280,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			Point p= can.toDisplay(e.x, e.y);
 			if (region == null) {
 				Rectangle bounds= fComposite.getBounds();
-				p= fComposite.toControl(p);
+				p= fShell.toControl(p);
 				if (!bounds.contains(p))
 					dispose();
 			} else {
@@ -292,8 +296,12 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		 * @see org.eclipse.swt.events.MouseTrackListener#mouseHover(org.eclipse.swt.events.MouseEvent)
 		 */
 		public void mouseHover(MouseEvent e) {
-			// bring up custom per-annotation hover based on the current selection
-			fHoverManager.showInformation();
+			if (fHoverManager == null) {
+				fHoverManager= new HoverManager();
+				fHoverManager.takesFocusWhenVisible(false);
+				fHoverManager.install(fComposite);
+				fHoverManager.showInformation();
+			}
 		}
 	}
 
@@ -326,8 +334,9 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 				}
 			});
 			
-			setAnchor(ANCHOR_TOP);
-			setFallbackAnchors(new Anchor[] { ANCHOR_BOTTOM, ANCHOR_RIGHT} );
+			setMargins(5, 10);
+			setAnchor(ANCHOR_BOTTOM);
+			setFallbackAnchors(new Anchor[] { ANCHOR_LEFT, ANCHOR_RIGHT} );
 		}
 
 		/*
@@ -335,7 +344,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		 */
 		protected void computeInformation() {
 			if (fSelection != null) {
-				Rectangle subjectArea= new Rectangle(0,0,fSelection.canvas.getSize().x, fSelection.canvas.getSize().y);
+				Rectangle subjectArea= fSelection.canvas.getBounds();
 				Object information= fSelection.fAnnotation;
 				if (information instanceof IAnnotationExtension)
 					information= ((IAnnotationExtension)information).getMessage();
@@ -344,8 +353,9 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 				
 				setInformation(information, subjectArea);
 			}
-			
 		}
+		
+		
 	}
 	
 	/** Model data. */
@@ -403,25 +413,25 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		fComposite.addMouseTrackListener(new MouseTrackAdapter() {
 
 			public void mouseExit(MouseEvent e) {
-				org.eclipse.swt.graphics.Region region= fShell.getRegion();
-				if (region == null) {
-					Rectangle bounds= fComposite.getBounds();
-					if (!bounds.contains(e.x, e.y))
-						dispose();
-				} else if (!region.contains(e.x, e.y)) {
-					dispose();
+				if (fComposite == null)
+						return;
+				Control[] children= fComposite.getChildren();
+				for (int i= 0; i < children.length; i++) {
+					if (children[i].getBounds().contains(e.x, e.y))
+						return;
 				}
+				
+				// if none of the children contains the event, we left the popup
+				dispose();
 			}
 
 		});
 		
 		fHandCursor= new Cursor(display, SWT.CURSOR_HAND);
 		fShell.setCursor(fHandCursor);
+		fComposite.setCursor(fHandCursor);
 		
 		setInfoSystemColor();
-		
-		fHoverManager= new HoverManager();
-		fHoverManager.install(fComposite);
 	}
 	
 	private void setInfoSystemColor() {
@@ -539,9 +549,11 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 				fShell.dispose();
 			fShell= null;
 			fComposite= null;
-			fHandCursor.dispose();
+			if (fHandCursor != null)
+				fHandCursor.dispose();
 			fHandCursor= null;
-			fHoverManager.dispose();
+			if (fHoverManager != null)
+				fHoverManager.dispose();
 			fHoverManager= null;
 			fSelection= null;
 		}
