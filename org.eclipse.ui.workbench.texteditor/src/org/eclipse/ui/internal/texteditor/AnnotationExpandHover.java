@@ -61,7 +61,8 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 		 * @see org.eclipse.jface.text.IInformationControlCreator#createInformationControl(org.eclipse.swt.widgets.Shell)
 		 */
 		public IInformationControl createInformationControl(Shell parent) {
-			return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
+//			return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
+			return new AnnotationExpansionControl(parent, SWT.NO_TRIM, new CircularLayouter());
 		}
 
 		/*

@@ -438,6 +438,7 @@ public class AnnotationBarHoverManager extends AbstractHoverInformationControlMa
 		
 		if (hover instanceof IAnnotationHoverExtension2) {
 			Control subjectControl= getSubjectControl();
+			if (true) return subjectControl.toDisplay(subjectArea.x + subjectArea.width / 2 - controlSize.x / 2, subjectArea.y + subjectArea.height / 2 - controlSize.y / 2);
 			// return a location that just overlaps the annotation on the bar
 			if (anchor == AbstractInformationControlManager.ANCHOR_RIGHT)
 				return subjectControl.toDisplay(subjectArea.x - 4, subjectArea.y - 2);

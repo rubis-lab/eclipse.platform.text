@@ -39,6 +39,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
@@ -270,12 +271,19 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 				item.deselect();
 			
 			// if the event lies outside the entire popup, dispose
-			Rectangle bounds= fComposite.getBounds();
+			org.eclipse.swt.graphics.Region region= fShell.getRegion();
 			Canvas can= (Canvas) e.getSource();
 			Point p= can.toDisplay(e.x, e.y);
-			p= fComposite.toControl(p);
-			if (!bounds.contains(p))
-				dispose();
+			if (region == null) {
+				Rectangle bounds= fComposite.getBounds();
+				p= fComposite.toControl(p);
+				if (!bounds.contains(p))
+					dispose();
+			} else {
+				p= fShell.toControl(p);
+				if (!region.contains(p))
+					dispose();
+			}
 			
 			
 		}
@@ -300,7 +308,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			Canvas can= (Canvas) e.getSource();
 			Annotation a= ((Item) can.getData()).fAnnotation;
 			if (a != null) {
-				Rectangle rect= new Rectangle(BORDER_WIDTH, BORDER_WIDTH, ANNOTATION_SIZE, ANNOTATION_SIZE);
+				Rectangle rect= new Rectangle(fLayouter.getBorderWidth(), fLayouter.getBorderWidth(), fLayouter.getAnnotationSize(), fLayouter.getAnnotationSize());
 				a.paint(e.gc, can, rect);
 			}
 		}
@@ -340,16 +348,12 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		}
 	}
 	
-	private static final int ANNOTATION_SIZE= 14;
-	private static final int BORDER_WIDTH= 2;
-	
-	
 	/** Model data. */
-	private AnnotationHoverInput fInput;
+	protected AnnotationHoverInput fInput;
 	/** The control's shell */
 	private Shell fShell;
 	/** The composite combining all the items. */
-	private Composite fComposite;
+	protected Composite fComposite;
 	/** The hand cursor. */
 	private Cursor fHandCursor;
 	/** The currently selected item, or <code>null</code> if none is selected. */
@@ -365,8 +369,13 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 	private final DisposeListener fDisposeListener;
 	private final IViewportListener fViewportListener;
 	
+	private IExpansionLayouter fLayouter;
 	
 	public AnnotationExpansionControl(Shell parent, int shellStyle) {
+		this(parent, shellStyle, new LinearLayouter());
+	}
+	
+	public AnnotationExpansionControl(Shell parent, int shellStyle, IExpansionLayouter layouter) {
 		fPaintListener= new MyPaintListener();
 		fMouseTrackListener= new MyMouseTrackListener();
 		fMouseListener= new MyMouseListener();
@@ -379,6 +388,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			}
 			
 		};
+		fLayouter= layouter;
 		
 		fShell= new Shell(parent, shellStyle);
 		Display display= fShell.getDisplay();
@@ -393,9 +403,14 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		fComposite.addMouseTrackListener(new MouseTrackAdapter() {
 
 			public void mouseExit(MouseEvent e) {
-				Rectangle bounds= fComposite.getBounds();
-				if (!bounds.contains(e.x, e.y))
+				org.eclipse.swt.graphics.Region region= fShell.getRegion();
+				if (region == null) {
+					Rectangle bounds= fComposite.getBounds();
+					if (!bounds.contains(e.x, e.y))
+						dispose();
+				} else if (!region.contains(e.x, e.y)) {
 					dispose();
+				}
 			}
 
 		});
@@ -454,12 +469,9 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		if (fInput.fViewer != null)
 			fInput.fViewer.addViewportListener(fViewportListener);
 		
-		// simple layout: a row of items
-		GridLayout layout= new GridLayout(fInput.fAnnotations.length, true);
-		layout.horizontalSpacing= 1;
-		layout.verticalSpacing= 1;
-		layout.marginHeight= 1;
-		layout.marginWidth= 1;
+		fShell.setRegion(fLayouter.getShellRegion(fInput.fAnnotations.length));
+		
+		Layout layout= fLayouter.getLayout(fInput.fAnnotations.length);
 		fComposite.setLayout(layout);
 		
 		Control[] children= fComposite.getChildren();
@@ -487,9 +499,7 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		// add missing items
 		for (int i= oldSize; i < newSize; i++) {
 			Canvas canvas= new Canvas(fComposite, SWT.NONE);
-			GridData gridData= new GridData(ANNOTATION_SIZE + 2 * BORDER_WIDTH, ANNOTATION_SIZE + 2 * BORDER_WIDTH);
-			gridData.horizontalAlignment= GridData.CENTER;
-			gridData.verticalAlignment= GridData.CENTER;
+			Object gridData= fLayouter.getLayoutData();
 			canvas.setLayoutData(gridData);
 			canvas.setBackground(display.getSystemColor(SWT.COLOR_INFO_BACKGROUND));
 			
