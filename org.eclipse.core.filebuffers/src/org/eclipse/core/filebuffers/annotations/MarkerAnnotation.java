@@ -36,9 +36,12 @@ public class MarkerAnnotation extends Annotation /*implements IAnnotationExtensi
 	 * @param marker the marker
 	 */
 	public MarkerAnnotation(IMarker marker) {
+		super(getMarkerType(marker));
 		Assert.isNotNull(marker);
 		fMarker= marker;
 	}
+	
+	
 	
 	/**
 	 * The <code>MarkerAnnotation</code> implementation of this
@@ -73,8 +76,12 @@ public class MarkerAnnotation extends Annotation /*implements IAnnotationExtensi
 	 * @since 3.0
 	 */
 	public String getMarkerType() {
+		return getMarkerType(fMarker);
+	}
+
+	private static String getMarkerType(IMarker marker) {
 		try {
-			return fMarker.getType();
+			return marker.getType();
 		} catch (CoreException e) {
 			return null;
 		}

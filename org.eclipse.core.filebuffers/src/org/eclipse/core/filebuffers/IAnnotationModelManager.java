@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.filebuffers;
 
+import java.util.Iterator;
+
 import org.eclipse.jface.text.source.IAnnotationModel;
 
 /**
@@ -61,4 +63,11 @@ public interface IAnnotationModelManager {
 	 * @return the registered annotation model or <code>null</code>
 	 */
 	IAnnotationModel getAnnotationModel(Object key);
+	
+	/**
+	 * Returns an iterator that enumerates all connected annotation models.
+	 * 
+	 * @return an iterator enumerating all connected annotation models.
+	 */
+	Iterator getAnnotationModelIterator();
 }

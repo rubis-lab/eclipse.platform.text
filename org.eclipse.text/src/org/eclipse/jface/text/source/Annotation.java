@@ -25,10 +25,51 @@ public class Annotation {
 	private Map fDataMap;
 	private Map fAnnotationAdapter;
 	
+	private String fType;
+	private boolean fIsPersistent;
+	
 	/**
-	 * Creates a new annotation.
+	 * Creates a new annotation of the given type.
+	 * 
+	 * @param annotationType the annotation type
+	 * @param isPersistent <code>true</code> if this annotation is persistent
 	 */
-	public Annotation() {
+	public Annotation(String annotationType, boolean isPersistent) {
+		fType= annotationType;
+	}
+	
+//	/**
+//	 * Creates a new annotation.
+//	 */
+//	public Annotation() {
+//	}
+	
+	/**
+	 * Returns the annotation type of this annotation.
+	 * 
+	 * @return the annotation type of this annotation
+	 */
+	public String getAnnotationType() {
+		return fType;
+	}
+	
+	/**
+	 * Sets the annotation type of this annotation. 
+	 * 
+	 * @param type the type of this annotation
+	 */
+	public void setAnnotationType(String type) {
+		fType= type;
+		fireAnnotationChanged();
+	}
+	
+	/**
+	 * Returns whether this annotation is persistent or not.
+	 * 
+	 * @return <code>true</code> if this annotation is persistent, <code>false</code> otherwise
+	 */
+	public boolean isPersistent() {
+		return fIsPersistent;
 	}
 	
 	/**
@@ -44,13 +85,13 @@ public class Annotation {
 				fDataMap.remove(key);
 				if (fDataMap.isEmpty())
 					fDataMap= null;
-				fireAnnotationDataChanged();
+				fireAnnotationChanged();
 			}
 		} else {
 			if (fDataMap == null)
 				fDataMap= new HashMap();
 			fDataMap.put(key, data);
-			fireAnnotationDataChanged();
+			fireAnnotationChanged();
 		}
 	}
 	
@@ -127,11 +168,11 @@ public class Annotation {
 	 * Notifies all annotation adapters about the fact that the annotation's
 	 * data changed.
 	 */
-	public void fireAnnotationDataChanged() {
+	public void fireAnnotationChanged() {
 		Iterator e= fAnnotationAdapter.values().iterator();
 		while (e.hasNext()) {
 			IAnnotationAdapter adapter= (IAnnotationAdapter) e.next();
-			adapter.annotationDataChanged(this);
+			adapter.annotationChanged(this);
 		}
 	}
 }

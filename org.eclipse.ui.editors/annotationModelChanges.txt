@@ -1,0 +1,23 @@
+Changes for decoupling annotations from the UI
+
+objective:
+	- add 
+	
+	
+step 1:
+	- split annotation and annotation presentation
+	- annotations support annotation adapters
+	- annotation presentation implements annotation adapter
+	- introduce extension point for providing custom annotation presentations
+		- check relation between this extension point and marker image provider
+	
+step 2:
+	- move annotation model support to file buffers
+	
+step 3:
+	- provide marker annotation model as default by file buffer inluding markerUpdater extension point
+	
+step 4:
+	- introduce new extension point for creating new annotation models for a file buffer
+	- use extension point to provide 
+	

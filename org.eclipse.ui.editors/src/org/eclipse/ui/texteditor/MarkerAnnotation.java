@@ -13,9 +13,7 @@ package org.eclipse.ui.texteditor;
 
 
 import org.eclipse.core.resources.IMarker;
-import org.eclipse.core.runtime.CoreException;
 
-import org.eclipse.jface.text.Assert;
 import org.eclipse.jface.text.source.Annotation;
 
 
@@ -25,7 +23,7 @@ import org.eclipse.jface.text.source.Annotation;
  *
  * @see org.eclipse.core.resources.IMarker
  */
-public class MarkerAnnotation extends Annotation implements IAnnotationExtension {
+public class MarkerAnnotation extends Annotation {
 	
 	/** The marker this annotation represents */
 	private IMarker fMarker;
@@ -35,8 +33,8 @@ public class MarkerAnnotation extends Annotation implements IAnnotationExtension
 	 *
 	 * @param marker the marker
 	 */
-	public MarkerAnnotation(IMarker marker) {
-		Assert.isNotNull(marker);
+	public MarkerAnnotation(String annotationType, IMarker marker) {
+		super(annotationType, true);
 		fMarker= marker;
 	}
 	
@@ -58,7 +56,7 @@ public class MarkerAnnotation extends Annotation implements IAnnotationExtension
 	public int hashCode() {
 		return fMarker.hashCode();
 	}
-		
+	
 	/**
 	 * Returns this annotation's underlying marker.
 	 *
@@ -67,39 +65,7 @@ public class MarkerAnnotation extends Annotation implements IAnnotationExtension
 	public IMarker getMarker() {
 		return fMarker;
 	}
-	
-	/*
-	 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getMarkerType()
-	 * @since 3.0
-	 */
-	public String getMarkerType() {
-		try {
-			return fMarker.getType();
-		} catch (CoreException e) {
-			return null;
-		}
-	}
 
-	/*
-	 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getSeverity()
-	 * @since 3.0
-	 */
-	public int getSeverity() {
-		return fMarker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
-	}
-
-	/*
-	 * @see org.eclipse.ui.texteditor.IAnnotationExtension#isTemporary()
-	 * @since 3.0
-	 */
-	public boolean isTemporary() {
-		return false;
-	}
-
-	/*
-	 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getMessage()
-	 * @since 3.0
-	 */
 	public String getMessage() {
 		return fMarker.getAttribute(IMarker.MESSAGE, null);
 	}

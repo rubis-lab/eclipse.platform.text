@@ -147,7 +147,8 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 	 * @return the new marker annotation
 	 */
 	protected MarkerAnnotation createMarkerAnnotation(IMarker marker) {
-		return new MarkerAnnotation(marker);
+		String annotationType= computeAnnotationType(marker);
+		return new MarkerAnnotation(annotationType, marker);
 	}
 
 	/**

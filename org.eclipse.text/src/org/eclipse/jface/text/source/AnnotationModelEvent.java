@@ -15,8 +15,8 @@ import java.util.Set;
 
 /**
  * Specification of changes applied to annotation models. 
- * The event carries the changed annotation model. <p>
- * Work in progress. Intented to also contain added, removed, and modified annotations.
+ * The event carries the changed annotation model
+ * as well as added, removed, and modified annotations.
  *
  * @see IAnnotationModel
  * @since 2.0
@@ -129,5 +129,15 @@ public class AnnotationModelEvent {
 		Annotation[] changed= new Annotation[size];
 		fChangedAnnotations.toArray(changed);
 		return changed;
+	}
+	
+	/**
+	 * Returns whether this annotation model event is empty or not.
+	 * 
+	 * @return <code>true</code> if this event is empty
+	 * @since 3.0
+	 */
+	public boolean isEmpty() {
+		return fAddedAnnotations.isEmpty() && fRemovedAnnotations.isEmpty() && fChangedAnnotations.isEmpty();
 	}
 }

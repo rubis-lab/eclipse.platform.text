@@ -11,6 +11,8 @@
 
 package org.eclipse.jface.text.source;
 
+import org.eclipse.core.runtime.CoreException;
+
 import java.util.Map;
 
 
@@ -64,4 +66,16 @@ public interface IAnnotationModelExtension {
 	 * @throws ClassCastException if one of the map key or values has a wrong type
 	 */
 	void replaceAnnotations(Annotation[] annotationsToRemove, Map annotationsToAdd) throws ClassCastException;
+	
+	/**
+	 * Commits the annotations of this annotation model.
+	 * TODO check this concept especially CoreExceptions as we are jface text here and not editors
+	 */
+	void commit() throws CoreException;
+	
+	/**
+	 * Reverts the annotations of this annotation model.
+	 * TODO check this concept especially CoreExceptions as we are jface text here and not editors
+	 */
+	void revert() throws CoreException;
 }

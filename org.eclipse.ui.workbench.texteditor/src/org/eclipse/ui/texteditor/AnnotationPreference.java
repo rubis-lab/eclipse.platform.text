@@ -12,6 +12,8 @@ package org.eclipse.ui.texteditor;
 
 import org.eclipse.swt.graphics.RGB;
 
+import org.eclipse.jface.resource.ImageDescriptor;
+
 
 /**
  * An annotation preference provides all the information required for handing the preferences for the presentation of annotations of a specified type.
@@ -564,5 +566,15 @@ public class AnnotationPreference {
 	 */
 	public void setShowInNextPrevDropdownToolbarAction(boolean showInNextPrevDropdownToolbarAction) {
 		fShowInNextPrevDropdownToolbarAction= showInNextPrevDropdownToolbarAction;
+	}
+	
+	public ImageDescriptor getDefaultIcon() {
+		// TODO fill in
+		return null;
+	}
+	
+	public IAnnotationPresenter getAnnotationImagePainter() {
+		// TODO fill in
+		return null;
 	}
 }

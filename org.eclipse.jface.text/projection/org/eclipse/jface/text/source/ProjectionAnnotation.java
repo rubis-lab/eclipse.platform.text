@@ -52,7 +52,6 @@ public class ProjectionAnnotation extends Annotation {
 	 * @param range the range.
 	 */
 	public ProjectionAnnotation(Position range) {
-		fProjectionRange= range;
 	}
 	
 	/*

@@ -16,23 +16,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.core.filebuffers.IAnnotationModelManager;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
-import org.eclipse.core.filebuffers.annotations.ResourceMarkerAnnotationModel;
 
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
+import org.eclipse.jface.text.source.IAnnotationModelExtension;
 
 /**
  * 
@@ -365,8 +369,8 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 		super.connect();
 		if (fReferenceCount == 1) {
 			fAnnotationModelManager= new AnnotationModelManager();
-			fAnnotationModelManager.registerAnnotationModel(fManager.getDefaultAnnotationModelKey(), new ResourceMarkerAnnotationModel(fFile));
-			fAnnotationModelManager.connect(fManager.getDefaultAnnotationModelKey());
+//			fAnnotationModelManager.registerAnnotationModel(fManager.getDefaultAnnotationModelKey(), new ResourceMarkerAnnotationModel(fFile));
+//			fAnnotationModelManager.connect(fManager.getDefaultAnnotationModelKey());
 		}
 	}
 	
@@ -376,21 +380,67 @@ public class ResourceTextFileBuffer extends ResourceFileBuffer implements ITextF
 	public void disconnect() throws CoreException {
 		super.disconnect();
 		if (isDisposed()) {
-			fAnnotationModelManager.disconnect(fManager.getDefaultAnnotationModelKey());
-			try {
-				fAnnotationModelManager.unregisterAnnotationModel(fManager.getDefaultAnnotationModelKey());
-			} catch (IllegalStateException x) {
-				// ignore
-			}
+//			fAnnotationModelManager.disconnect(fManager.getDefaultAnnotationModelKey());
+//			try {
+//				fAnnotationModelManager.unregisterAnnotationModel(fManager.getDefaultAnnotationModelKey());
+//			} catch (IllegalStateException x) {
+//				// ignore
+//			}
 			fAnnotationModelManager= null;
 		}
 	}
 	
-	protected void commitAnnotationModels() {
-		// TODO
+	protected void commitAnnotationModels() throws CoreException {
+		if (fAnnotationModelManager == null)
+			return;
+		
+		List exceptions= new ArrayList();
+		Iterator e= fAnnotationModelManager.getAnnotationModelIterator();
+		while (e.hasNext()) {
+			Object o= e.next();
+			if (o instanceof IAnnotationModelExtension) {
+				IAnnotationModelExtension extension= (IAnnotationModelExtension) o;
+				try {
+					extension.commit();
+				} catch (CoreException x) {
+					exceptions.add(x);
+				}
+			}
+		}
+		
+		if (!exceptions.isEmpty()) {
+			IStatus[] stati= new IStatus[exceptions.size()];
+			for (int i= 0; i < stati.length; i++)
+				stati[i]= ((CoreException) exceptions.get(i)).getStatus();
+			IStatus status= new MultiStatus(FileBuffersPlugin.PLUGIN_ID, IStatus.ERROR, stati, "committing annotation models failed", null);
+			throw new CoreException(status);
+		}
 	}
 	
-	protected void revertAnnotationModels() {
-		// TODO
+	protected void revertAnnotationModels() throws CoreException {
+		if (fAnnotationModelManager == null)
+			return;
+		
+		List exceptions= new ArrayList();
+		Iterator e= fAnnotationModelManager.getAnnotationModelIterator();
+		while (e.hasNext()) {
+			Object o= e.next();
+			if (o instanceof IAnnotationModelExtension) {
+				IAnnotationModelExtension extension= (IAnnotationModelExtension) o;
+				try {
+					extension.revert();
+				} catch (CoreException x) {
+					exceptions.add(x);
+				}
+			}
+		}
+		
+		if (!exceptions.isEmpty()) {
+			IStatus[] stati= new IStatus[exceptions.size()];
+			for (int i= 0; i < stati.length; i++)
+				stati[i]= ((CoreException) exceptions.get(i)).getStatus();
+			IStatus status= new MultiStatus(FileBuffersPlugin.PLUGIN_ID, IStatus.ERROR, stati, "reverting annotation models failed", null);
+			throw new CoreException(status);
+		}
 	}
 }

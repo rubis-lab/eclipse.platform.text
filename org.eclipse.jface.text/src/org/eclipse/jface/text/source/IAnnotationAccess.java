@@ -33,6 +33,8 @@ public interface IAnnotationAccess {
 	 * @param annotation the annotation
 	 * @return <code>true</code> if the annotation spans multiple lines,
 	 * 	<code>false</code> otherwise
+	 * 
+	 * @deprecated no longer used as is was alwa
 	 */
 	boolean isMultiLine(Annotation annotation);
 	

@@ -21,7 +21,7 @@ import org.eclipse.swt.widgets.Canvas;
 /**
  * @since 3.0
  */
-public class AnnotationPresentation implements IAnnotationAdapter {
+public abstract class _AbstractAnnotationPresentation implements IAnnotationAdapter, _IAnnotationPresentation {
 	
 	/**
 	 * Convenience method for drawing an image aligned inside a rectangle.
@@ -82,75 +82,27 @@ public class AnnotationPresentation implements IAnnotationAdapter {
 	 */
 	protected static void drawImage(Image image, GC gc, Canvas canvas, Rectangle r, int align) {
 		drawImage(image, gc, canvas, r, align, SWT.CENTER);
+	}	
+	
+	
+	private String fAnnotationType;
+	private Object fAdapterKey;
+	
+	
+	protected _AbstractAnnotationPresentation(String annotationType, Object adapterKey) {
+		fAnnotationType= annotationType;
+		fAdapterKey= adapterKey;
 	}
 	
 	
-	
-	protected Image fImage;
-	protected int fLayer;
-	
-	
-	public AnnotationPresentation() {
-	}
-	
-	/**
-	 * Returns the image for this presentation.
-	 * 
-	 * @return the image for this presentation
-	 */
-	public Image getImage() {
-		return fImage;
-	}
-
-	/**
-	 * Sets the image for this presentation.
-	 * 
-	 * @param image the image for this presentation
-	 */
-	public void setImage(Image image) {
-		fImage= image;
-	}
-
-	/**
-	 * Returns the layer for this annotation presentation. Annotations are considered
-	 * being located at layers and are considered being painted starting with
-	 * layer 0 upwards. Thus an annotation at layer 5 will be drawn on top of
-	 * all co-located annotations at the layers 4 - 0.
-	 * 
-	 * @return the layer of the given annotation
-	 */
-	public int getLayer() {
-		return fLayer;
-	}
-
-	/**
-	 * Sets the layer for this presentation.
-	 * 
-	 * @param layer the layer
-	 * @see #getLayer()
-	 */
-	public void setLayer(int layer) {
-		fLayer= layer;
-	}
-
-	/**
-	 * Draws a graphical representation within the given bounds.
-	 * 
-	 * @param GC the drawing GC
-	 * @param canvas the canvas to draw on
-	 * @param bounds the bounds inside the canvas to draw on
-	 */
-	public void paint(GC gc, Canvas canvas, Rectangle bounds) {
-		if (fImage != null)
-			drawImage(fImage, gc, canvas, bounds, SWT.CENTER, SWT.TOP);
-	}
-
 	/*
 	 * @see org.eclipse.jface.text.source.IAnnotationAdapter#annotationDataChanged(org.eclipse.jface.text.source.Annotation)
 	 */
-	public void annotationDataChanged(Annotation annotation) {
+	public void annotationChanged(Annotation annotation) {
+		if (!fAnnotationType.equals(annotation.getAnnotationType()))
+			annotation.setAnnotationAdapter(fAdapterKey, null);
 	}
-
+	
 	/*
 	 * @see org.eclipse.jface.text.source.IAnnotationAdapter#annotationDisposed(org.eclipse.jface.text.source.Annotation)
 	 */

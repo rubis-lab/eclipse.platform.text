@@ -11,7 +11,10 @@
 package org.eclipse.core.internal.filebuffers;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.filebuffers.IAnnotationModelManager;
 
@@ -89,5 +92,19 @@ public class AnnotationModelManager implements IAnnotationModelManager {
 		if (registered != null)
 			return registered.fModel;
 		return null;
+	}
+	
+	/*
+	 * @see org.eclipse.core.filebuffers.IAnnotationModelManager#getAnnotationModelIterator()
+	 */
+	public Iterator getAnnotationModelIterator() {
+		// TODO need better implementation
+		Set models= new HashSet();
+		Iterator e= fValues.values().iterator();
+		while (e.hasNext()) {
+			Value registered= (Value) e.next();
+			models.add(registered.fModel);
+		}
+		return models.iterator();
 	}
 }

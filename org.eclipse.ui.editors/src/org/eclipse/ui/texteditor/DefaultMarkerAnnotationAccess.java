@@ -15,11 +15,15 @@ import java.util.Iterator;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
 
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Canvas;
+
 import org.eclipse.jface.text.source.Annotation;
-import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.IAnnotationAccessExtension;
 import org.eclipse.jface.text.source.IAnnotationAdapter;
+import org.eclipse.jface.text.source._AbstractAnnotationPresentation;
 
 import org.eclipse.ui.internal.editors.text.EditorsPlugin;
 
@@ -144,21 +148,30 @@ public class DefaultMarkerAnnotationAccess implements IAnnotationAccess, IAnnota
 		return null;
 	}
 
-	/*
-	 * @see org.eclipse.jface.text.source.IAnnotationAccessExtension#getAnnotationPresentation(org.eclipse.jface.text.source.Annotation)
-	 */
-	public AnnotationPresentation getAnnotationPresentation(Annotation annotation) {
-		IAnnotationAdapter adapter= annotation.getAnnotationAdapter(AnnotationPresentation.class);
+	private _AbstractAnnotationPresentation getAnnotationPresentation(Annotation annotation) {
+		IAnnotationAdapter adapter= annotation.getAnnotationAdapter(_AbstractAnnotationPresentation.class);
 		if (adapter instanceof IAnnotationAdapter)
-			return (AnnotationPresentation) adapter;
+			return (_AbstractAnnotationPresentation) adapter;
 		
 		if (annotation instanceof MarkerAnnotation){
 			MarkerAnnotation m= (MarkerAnnotation) annotation;
-			AnnotationPresentation presentation= new MarkerAnnotationPresentation(m);
-			annotation.setAnnotationAdapter(AnnotationPresentation.class, presentation);
+			_AbstractAnnotationPresentation presentation= new _MarkerAnnotationPresentation(m);
+			annotation.setAnnotationAdapter(_AbstractAnnotationPresentation.class, presentation);
 			return presentation;
 		}
 		
 		return null;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAccessExtension#getLayer(org.eclipse.jface.text.source.Annotation)
+	 */
+	public int getLayer(Annotation annotation) {
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAccessExtension#paint(org.eclipse.jface.text.source.Annotation, org.eclipse.swt.graphics.GC, org.eclipse.swt.widgets.Canvas, org.eclipse.swt.graphics.Rectangle)
+	 */
+	public void paint(Annotation annotation, GC gc, Canvas canvas, Rectangle bounds) {
 	}
 }

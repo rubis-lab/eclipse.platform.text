@@ -28,7 +28,6 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
-import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.AnnotationRulerColumn;
 import org.eclipse.jface.text.source.ChangeRulerColumn;
 import org.eclipse.jface.text.source.CompositeRuler;
@@ -47,6 +46,7 @@ import org.eclipse.jface.text.source.LineNumberChangeRulerColumn;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
 import org.eclipse.jface.text.source.OverviewRuler;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.jface.text.source._AbstractAnnotationPresentation;
 
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.editors.text.ITextEditorHelpContextIds;
@@ -176,8 +176,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	public ExtendedTextEditor() {
 		super();
 		fAnnotationPreferences= new MarkerAnnotationPreferences();
-		Annotation rangeIndicator= new Annotation();
-		rangeIndicator.setAnnotationAdapter(AnnotationPresentation.class, new DefaultRangeIndicatorPresentation());
+		Annotation rangeIndicator= new Annotation(null, false);
 		setRangeIndicator(rangeIndicator);
 		initializeKeyBindingScopes();
 		initializeEditor();
@@ -259,6 +258,10 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 * @return the created annotation access
 	 */
 	protected IAnnotationAccess createAnnotationAccess() {
+		// TODO move that into the annotation access
+		Annotation rangeIndicator= getRangeIndicator();
+		rangeIndicator.setAnnotationAdapter(_AbstractAnnotationPresentation.class, new _DefaultRangeIndicatorPresentation());
+		
 		return new DefaultMarkerAnnotationAccess(fAnnotationPreferences);
 	}
 

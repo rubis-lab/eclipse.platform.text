@@ -44,7 +44,6 @@ import org.eclipse.jface.text.source.IAnnotationModelListenerExtension;
 import org.eclipse.jface.text.source.ILineDiffInfo;
 import org.eclipse.jface.text.source.ILineDiffer;
 
-import org.eclipse.ui.texteditor.IAnnotationExtension;
 import org.eclipse.ui.texteditor.quickdiff.IQuickDiffReferenceProvider;
 
 import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
@@ -75,12 +74,13 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 	 * The local implementation of <code>ILineDiffInfo</code>. As instances are also <code>Annotation</code>s,
 	 * they can be used in <code>DocumentLineDiffer</code>s <code>IAnnotationModel</code> protocol.
 	 */
-	private final class DiffRegion extends Annotation implements ILineDiffInfo, IAnnotationExtension {
+	private final class DiffRegion extends Annotation implements ILineDiffInfo {
 
 		private RangeDifference fDifference;
 		private int fOffset;
 
 		DiffRegion(RangeDifference difference, int offset) {
+			super("org.eclipse.quickdiff.changeindication", false);
 			fOffset= offset;
 			fDifference= difference;
 		}
@@ -190,34 +190,21 @@ public class DocumentLineDiffer implements ILineDiffer, IDocumentListener, IAnno
 			return new String[0];
 		}
 
-		/*
-		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getMarkerType()
-		 */
-		public String getMarkerType() {
-			switch (getType()) {
-				case ILineDiffInfo.UNCHANGED:
-					return null; // we're no marker...
-				default:
-					return "org.eclipse.quickdiff.changeindication"; //$NON-NLS-1$
-			}
-		}
-
-		/*
-		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getSeverity()
-		 */
-		public int getSeverity() {
-			return 0; // same as IMarker.SEVERITY_INFO;
-		}
-
-		/*
-		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#isTemporary()
-		 */
-		public boolean isTemporary() {
-			return true;
-		}
-
+//		/*
+//		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getMarkerType()
+//		 */
+//		public String getMarkerType() {
+//			switch (getType()) {
+//				case ILineDiffInfo.UNCHANGED:
+//					return null; // we're no marker...
+//				default:
+//					return "org.eclipse.quickdiff.changeindication"; //$NON-NLS-1$
+//			}
+//		}
+		
 		/*
 		 * @see org.eclipse.ui.texteditor.IAnnotationExtension#getMessage()
+		 * TODO needs to be moved to a annotation presentation...
 		 */
 		public String getMessage() {
 			int r= fDifference.rightLength();

@@ -27,7 +27,8 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 
-import org.eclipse.jface.text.source.AnnotationPresentation;
+import org.eclipse.jface.text.source.IAnnotationAccessExtension;
+import org.eclipse.jface.text.source._AbstractAnnotationPresentation;
 
 
 /**
@@ -37,7 +38,7 @@ import org.eclipse.jface.text.source.AnnotationPresentation;
  * This class is instantiated automatically by <code>AbstractTextEditor</code>.
  * </p>
  */
-public class DefaultRangeIndicatorPresentation extends AnnotationPresentation {
+public class _DefaultRangeIndicatorPresentation extends _AbstractAnnotationPresentation {
 	
 	/**
 	 * Creates and returns a new SWT image with the given size on
@@ -93,12 +94,17 @@ public class DefaultRangeIndicatorPresentation extends AnnotationPresentation {
 	 /** The color palette data of this range indicator */
 	private static PaletteData fgPaletteData;
 	
+	
+	private int fLayer;
+	private Image fImage;
+	
+	
 	/**
 	 * Creates a new range indicator.
 	 */
-	public DefaultRangeIndicatorPresentation() {
-		super();
-		setLayer(0);
+	public _DefaultRangeIndicatorPresentation() {
+		super(null, null);
+		fLayer= IAnnotationAccessExtension.DEFAULT_LAYER;
 	}
 	
 	/*
@@ -162,5 +168,26 @@ public class DefaultRangeIndicatorPresentation extends AnnotationPresentation {
 		}
 		
 		return fImage;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source._IAnnotationPresentation#getLayer()
+	 */
+	public int getLayer() {
+		return fLayer;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source._IAnnotationPresentation#getAnnotationTypeLabel()
+	 */
+	public String getAnnotationTypeLabel() {
+		return null;
+	}
+	
+	/*
+	 * @see org.eclipse.jface.text.source._IAnnotationPresentation#getText()
+	 */
+	public String getText() {
+		return null;
 	}
 }

@@ -8,21 +8,19 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
+package org.eclipse.ui.texteditor;
 
-package org.eclipse.jface.text.source;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Canvas;
+
+import org.eclipse.jface.text.source.Annotation;
 
 /**
  * @since 3.0
  */
-public interface IAnnotationAdapter {
-		
-	/**
-	 * Notifies this adapter that the annotation data changed. 
-	 */
-	void annotationChanged(Annotation annotation);
-	
-	/**
-	 * Notifies this adapter that it's annotation has been disposed.
-	 */
-	void annotationDisposed(Annotation annotation);
+interface IAnnotationPresenter {
+	String getText(Annotation annotation);
+	void paint(Annotation annotation, GC gc, Canvas canvas, Rectangle r);
+	void annotationDataChanged(Annotation annotation);
 }
