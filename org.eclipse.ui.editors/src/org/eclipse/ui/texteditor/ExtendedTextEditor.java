@@ -94,8 +94,16 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	private final static String PRINT_MARGIN_COLOR= ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLOR;
 	/**
 	 * Preference key for print margin ruler column.
-	 **/
+	 */
 	private final static String PRINT_MARGIN_COLUMN= ExtendedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLUMN;
+	/**
+	 * Help context id for the add task action.
+	 */
+	protected final static String ADD_TASK_HELP_CONTEXT_ID= IAbstractTextEditorHelpContextIds.PREFIX + IDEActionFactory.ADD_TASK.getId() + IAbstractTextEditorHelpContextIds.ACTION_POSTFIX;
+	/**
+	 * Help context id for the bookmark action.
+	 */
+	protected final static String BOOKMARK_HELP_CONTEXT_ID= IAbstractTextEditorHelpContextIds.PREFIX + IDEActionFactory.BOOKMARK.getId() + IAbstractTextEditorHelpContextIds.ACTION_POSTFIX;
 	
 	/**
 	 * Adapter class for <code>IGotoMarker</code>.
@@ -884,7 +892,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 * must be determined as it might differ from the position stated in the marker.
 	 * 
 	 * @param marker the marker to go to
-	 * @see EditorPart#gotoMarker(org.eclipse.core.resources.IMarker)
+	 * @deprecated visibility will be reduced, use <code>getAdapter(IGotoMarker.class) for accessing this method</code>
 	 */
 	public void gotoMarker(IMarker marker) {
 		
@@ -956,12 +964,12 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 		super.createActions();
 		
 		ResourceAction action= new AddMarkerAction(TextEditorMessages.getResourceBundle(), "Editor.AddBookmark.", this, IMarker.BOOKMARK, true); //$NON-NLS-1$
-		action.setHelpContextId(IAbstractTextEditorHelpContextIds.BOOKMARK_ACTION);
+		action.setHelpContextId(BOOKMARK_HELP_CONTEXT_ID);
 		action.setActionDefinitionId(ITextEditorActionDefinitionIds.ADD_BOOKMARK);
 		setAction(IDEActionFactory.BOOKMARK.getId(), action);
 
 		action= new AddTaskAction(TextEditorMessages.getResourceBundle(), "Editor.AddTask.", this); //$NON-NLS-1$
-		action.setHelpContextId(IAbstractTextEditorHelpContextIds.ADD_TASK_ACTION);
+		action.setHelpContextId(ADD_TASK_HELP_CONTEXT_ID);
 		action.setActionDefinitionId(ITextEditorActionDefinitionIds.ADD_TASK);
 		setAction(IDEActionFactory.ADD_TASK.getId(), action);		
 	}
