@@ -100,7 +100,11 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 	private InternalListener fInternalListener= new InternalListener();
 	/** The width of this vertical ruler */
 	private int fWidth;
-	
+	/**
+	 * The annotation access
+	 * @since 3.0
+	 */
+	private IAnnotationAccess fAnnotationAccess;
 	
 	/**
 	 * Constructs a vertical ruler with the given width.
@@ -109,6 +113,16 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 	 */
 	public VerticalRuler(int width) {
 		fWidth= width;
+	}
+	
+	/**
+	 * Sets the annotation access for this vertical ruler.
+	 * 
+	 * @param access the annotation access
+	 * @since 3.0
+	 */
+	public void setAnnotationAccess(IAnnotationAccess access) {
+		fAnnotationAccess= access;
 	}
 	
 	/*
@@ -129,7 +143,7 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 		
 		fCanvas.addPaintListener(new PaintListener() {
 			public void paintControl(PaintEvent event) {
-				if (fTextViewer != null)
+				if (fTextViewer != null && fAnnotationAccess != null)
 					doubleBufferPaint(event.gc);
 			}
 		});
@@ -248,6 +262,20 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 	}
 	
 	/**
+	 * Returns the presentation for the given annotation or <code>null</code>.
+	 * 
+	 * @param annotation the annotation
+	 * @return the presentation for the given annotation
+	 */
+	private AnnotationPresentation getAnnotationPresentation(Annotation annotation) {
+		if (fAnnotationAccess instanceof IAnnotationAccessExtension) {
+			IAnnotationAccessExtension access= (IAnnotationAccessExtension) fAnnotationAccess;
+			return access.getAnnotationPresentation(annotation);
+		}
+		return null;
+	}
+	
+	/**
 	 * Draws the vertical ruler w/o drawing the Canvas background.
 	 * 
 	 * @param gc  the gc to draw into
@@ -287,8 +315,11 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 			Iterator iter= fModel.getAnnotationIterator();
 			while (iter.hasNext()) {
 				Annotation annotation= (Annotation) iter.next();
+				AnnotationPresentation presentation= getAnnotationPresentation(annotation);
+				if (presentation == null)
+					continue;
 				
-				int lay= annotation.getLayer();
+				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
 				if (lay != layer)	// wrong layer: skip annotation
 					continue;
@@ -327,7 +358,7 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 					r.height= (lines+1) * lineheight;
 					
 					if (r.y < d.y)  // annotation within visible area
-						annotation.paint(gc, fCanvas, r);
+						presentation.paint(gc, fCanvas, r);
 					
 				} catch (BadLocationException e) {
 				}
@@ -364,8 +395,11 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 			while (iter.hasNext()) {
 
 				Annotation annotation= (Annotation) iter.next();
+				AnnotationPresentation presentation= getAnnotationPresentation(annotation);
+				if (presentation == null)
+					continue;
 
-				int lay= annotation.getLayer();
+				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
 				if (lay != layer)	// wrong layer: skip annotation
 					continue;
@@ -395,7 +429,7 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 				r.height= (lines+1) * lineheight;
 
 				if (r.y < dimension.y)  // annotation within visible area
-					annotation.paint(gc, fCanvas, r);
+					presentation.paint(gc, fCanvas, r);
 			}
 		}
 	}
@@ -424,7 +458,7 @@ public final class VerticalRuler implements IVerticalRuler, IVerticalRulerExtens
 	 * Redraws the vertical ruler.
 	 */
 	private void redraw() {
-		if (fCanvas != null && !fCanvas.isDisposed()) {
+		if (fCanvas != null && !fCanvas.isDisposed() && fAnnotationAccess != null) {
 			GC gc= new GC(fCanvas);
 			doubleBufferPaint(gc);
 			gc.dispose();

@@ -307,19 +307,9 @@ public abstract class AbstractMarkerAnnotationModel extends AnnotationModel {
 	 */
 	protected void modifyMarkerAnnotation(IMarker marker) {
 		MarkerAnnotation a= getMarkerAnnotation(marker);
-		if (a != null) {
-			
-			// update annotation presentation
-			a.update();
-			
-			// update annotation position
-			Position p1= createPositionFromMarker(marker);
-			if (p1 != null) {
-				Position p0= (Position) fAnnotations.get(a);
-				p0.setOffset(p1.getOffset());
-				p0.setLength(p1.getLength());
-			}
-		}
+		Position p= createPositionFromMarker(marker);
+		if (a != null && p != null)
+			modifyAnnotation(a, p, false);
 	}
 
 	/*

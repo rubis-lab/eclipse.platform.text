@@ -16,6 +16,7 @@ import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.IAnnotationAccessExtension;
 
@@ -26,6 +27,8 @@ import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
  * @since 2.1
  */
 public class DefaultMarkerAnnotationAccess implements IAnnotationAccess, IAnnotationAccessExtension {
+	
+	
 	
 	/** Constant for the unknown marker type */
 	public final static String UNKNOWN= TextEditorPlugin.PLUGIN_ID + ".unknown";  //$NON-NLS-1$
@@ -138,6 +141,24 @@ public class DefaultMarkerAnnotationAccess implements IAnnotationAccess, IAnnota
 		}
 		if (preference != null)
 			return preference.getPreferenceLabel();
+		
+		return null;
+	}
+
+	/*
+	 * @see org.eclipse.jface.text.source.IAnnotationAccessExtension#getAnnotationPresentation(org.eclipse.jface.text.source.Annotation)
+	 */
+	public AnnotationPresentation getAnnotationPresentation(Annotation annotation) {
+		Object data= annotation.getData(AnnotationPresentation.class);
+		if (data instanceof AnnotationPresentation)
+			return (AnnotationPresentation) data;
+		
+		if (annotation instanceof MarkerAnnotation){
+			MarkerAnnotation m= (MarkerAnnotation) annotation;
+			AnnotationPresentation presentation= new MarkerAnnotationPresentation(m);
+			annotation.setData(AnnotationPresentation.class, presentation);
+			return presentation;
+		}
 		
 		return null;
 	}

@@ -11,10 +11,14 @@
 
 package org.eclipse.jface.text.source;
 
+
 /**
- * Extension interface for <code>IAnnotationAccess</code>.
- * Allows to get a label for the annotation's type.
- * </code>.
+ * Extension interface for <code>IAnnotationAccess</code>. Provides the
+ * following information and functions in addition to <code>IAnnotationAccess</code>.
+ * <ul>
+ * <li>a label for the type of a given annotation type</li>
+ * <li>the presentation of a given annotation</li>
+ * </ul>
  * 
  * @since 3.0
  */
@@ -27,4 +31,12 @@ public interface IAnnotationAccessExtension {
 	 * @return the label the given annotation's type or <code>null</code> if no such label exists
 	 */
 	String getTypeLabel(Annotation annotation);
+	
+	/**
+	 * Returns the annotation presentation for the given annotation.
+	 * 
+	 * @param annotation the annotation
+	 * @return the presentation for the given annotation
+	 */
+	AnnotationPresentation getAnnotationPresentation(Annotation annotation);
 }

@@ -102,6 +102,11 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	private int fWidth;
 	/** Switch for enabling/disabling the setModel method. */
 	private boolean fAllowSetModel= true;
+	/**
+	 * The annotation access.
+	 * @since 3.0
+	 */
+	private IAnnotationAccess fAnnotationAccess;
 	
 	
 	/**
@@ -123,6 +128,11 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 */
 	public AnnotationRulerColumn(int width) {
 		fWidth= width;
+	}
+	
+	
+	public void setAnnotationAccess(IAnnotationAccess access) {
+		fAnnotationAccess= access;
 	}
 	
 	/*
@@ -152,7 +162,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 		
 		fCanvas.addPaintListener(new PaintListener() {
 			public void paintControl(PaintEvent event) {
-				if (fCachedTextViewer != null)
+				if (fCachedTextViewer != null && fAnnotationAccess != null)
 					doubleBufferPaint(event.gc);
 			}
 		});
@@ -276,6 +286,20 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	}
 	
 	/**
+	 * Returns the presentation for the given annotation or <code>null</code>.
+	 * 
+	 * @param annotation the annotation
+	 * @return the presentation for the given annotation
+	 */
+	private AnnotationPresentation getAnnotationPresentation(Annotation annotation) {
+		if (fAnnotationAccess instanceof IAnnotationAccessExtension) {
+			IAnnotationAccessExtension access= (IAnnotationAccessExtension) fAnnotationAccess;
+			return access.getAnnotationPresentation(annotation);
+		}
+		return null;
+	}
+	
+	/**
 	 * Draws the vertical ruler w/o drawing the Canvas background.
 	 * 
 	 * @param gc the gc to draw into
@@ -329,8 +353,11 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 			Iterator iter= fModel.getAnnotationIterator();
 			while (iter.hasNext()) {
 				Annotation annotation= (Annotation) iter.next();
+				AnnotationPresentation presentation= getAnnotationPresentation(annotation);
+				if (presentation == null)
+					continue;
 				
-				int lay= annotation.getLayer();
+				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
 				if (lay != layer)	// wrong layer: skip annotation
 					continue;
@@ -373,7 +400,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 					r.height= (lines+1) * lineheight;
 					
 					if (r.y < dimension.y)  // annotation within visible area
-						annotation.paint(gc, fCanvas, r);
+						presentation.paint(gc, fCanvas, r);
 					
 				} catch (BadLocationException e) {
 				}
@@ -408,8 +435,11 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 			while (iter.hasNext()) {
 
 				Annotation annotation= (Annotation) iter.next();
+				AnnotationPresentation presentation= getAnnotationPresentation(annotation);
+				if (presentation == null)
+					continue;
 
-				int lay= annotation.getLayer();
+				int lay= presentation.getLayer();
 				maxLayer= Math.max(maxLayer, lay+1);	// dynamically update layer maximum
 				if (lay != layer)	// wrong layer: skip annotation
 					continue;
@@ -439,7 +469,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 				r.height= (lines+1) * lineheight;
 
 				if (r.y < dimension.y)  // annotation within visible area
-					annotation.paint(gc, fCanvas, r);
+					presentation.paint(gc, fCanvas, r);
 			}
 		}
 	}
@@ -465,7 +495,7 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	 * @see IVerticalRulerColumn#redraw()
 	 */
 	public void redraw() {
-		if (fCanvas != null && !fCanvas.isDisposed()) {
+		if (fCanvas != null && !fCanvas.isDisposed() && fAnnotationAccess != null) {
 			GC gc= new GC(fCanvas);
 			doubleBufferPaint(gc);
 			gc.dispose();

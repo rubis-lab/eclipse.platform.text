@@ -12,7 +12,6 @@
 package org.eclipse.ui.texteditor;
 
  
-import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
@@ -28,31 +27,82 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 
+import org.eclipse.jface.text.source.AnnotationPresentation;
+
 
 /**
- * Specialized annotation to indicate a particular range of text lines.
+ * Specialized annotation presentation for the range indicator.
  * <p>
  * This class may be instantiated; it is not intended to be subclassed.
  * This class is instantiated automatically by <code>AbstractTextEditor</code>.
  * </p>
  */
-public class DefaultRangeIndicator extends Annotation {
+public class DefaultRangeIndicatorPresentation extends AnnotationPresentation {
+	
+	/**
+	 * Creates and returns a new SWT image with the given size on
+	 * the given display which is used as this range indicator's image.
+	 *
+	 * @param display the display on which to create the image
+	 * @return a new image
+	 */
+	private static Image createImage(Display display, Point size) {
+
+		int width= size.x;
+		int height= size.y;
+
+		if (fgPaletteData == null)
+			fgPaletteData= createPalette(display);
+		
+		ImageData imageData= new ImageData(width, height, 1, fgPaletteData);
+
+		for (int y= 0; y < height; y++)
+			for (int x= 0; x < width; x++)
+				imageData.setPixel(x, y, (x + y) % 2);
+
+		return new Image(display, imageData);
+	}
+
+	/**
+	 * Creates and returns a new color palette data.
+	 * 
+	 * @param display
+	 * @return the new color palette data
+	 */
+	private static PaletteData createPalette(Display display) {
+		Color c1;
+		Color c2;
+
+		if (false) {
+			// range lighter
+			c1= display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
+			c2= display.getSystemColor(SWT.COLOR_LIST_BACKGROUND);
+		} else {
+			// range darker
+			c1= display.getSystemColor(SWT.COLOR_LIST_SELECTION);
+			c2= display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
+		}
+		
+		RGB rgbs[]= new RGB[] {
+			new RGB(c1.getRed(), c1.getGreen(), c1.getBlue()),
+			new RGB(c2.getRed(), c2.getGreen(), c2.getBlue())};
+
+		return new PaletteData(rgbs);
+	}
 
 	 /** The color palette data of this range indicator */
 	private static PaletteData fgPaletteData;
-	/** The image of this range indicator */
-	private Image fImage;
 	
 	/**
 	 * Creates a new range indicator.
 	 */
-	public DefaultRangeIndicator() {
+	public DefaultRangeIndicatorPresentation() {
 		super();
 		setLayer(0);
 	}
 	
 	/*
-	 * @see Annotation#paint(GC, Canvas, Rectangle)
+	 * @see org.eclipse.jface.text.source.AnnotationPresentation#paint(org.eclipse.swt.graphics.GC, org.eclipse.swt.widgets.Canvas, org.eclipse.swt.graphics.Rectangle)
 	 */
 	public void paint(GC gc, Canvas canvas, Rectangle bounds) {
 
@@ -112,56 +162,5 @@ public class DefaultRangeIndicator extends Annotation {
 		}
 		
 		return fImage;
-	}
-
-	/**
-	 * Creates and returns a new SWT image with the given size on
-	 * the given display which is used as this range indicator's image.
-	 *
-	 * @param display the display on which to create the image
-	 * @return a new image
- 	 */
-	private static Image createImage(Display display, Point size) {
-
-		int width= size.x;
-		int height= size.y;
-
-		if (fgPaletteData == null)
-			fgPaletteData= createPalette(display);
-		
-		ImageData imageData= new ImageData(width, height, 1, fgPaletteData);
-
-		for (int y= 0; y < height; y++)
-			for (int x= 0; x < width; x++)
-				imageData.setPixel(x, y, (x + y) % 2);
-
-		return new Image(display, imageData);
-	}
-
-	/**
-	 * Creates and returns a new color palette data.
-	 * 
-	 * @param display
-	 * @return the new color palette data
-	 */
-	private static PaletteData createPalette(Display display) {
-		Color c1;
-		Color c2;
-
-		if (false) {
-			// range lighter
-			c1= display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
-			c2= display.getSystemColor(SWT.COLOR_LIST_BACKGROUND);
-		} else {
-			// range darker
-			c1= display.getSystemColor(SWT.COLOR_LIST_SELECTION);
-			c2= display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
-		}
-		
-		RGB rgbs[]= new RGB[] {
-			new RGB(c1.getRed(), c1.getGreen(), c1.getBlue()),
-			new RGB(c2.getRed(), c2.getGreen(), c2.getBlue())};
-
-		return new PaletteData(rgbs);
 	}
 }

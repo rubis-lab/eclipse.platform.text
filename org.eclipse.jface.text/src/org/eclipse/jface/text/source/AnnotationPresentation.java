@@ -8,9 +8,8 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
+
 package org.eclipse.jface.text.source;
-
-
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.FontMetrics;
@@ -20,33 +19,9 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Canvas;
 
 /**
- * Abstract annotation managed by an <code>IAnnotationModel</code>.
- * Annotations are considered being located at layers and are considered being painted
- * starting with layer 0 upwards. Thus an annotation of layer 5 will be drawn on top of
- * all co-located annotations at the layers 4 - 0. Subclasses must provide the annotations
- * paint method.
- *
- * @see IVerticalRuler
+ * @since 3.0
  */
-public abstract class Annotation {
-	
-	/** The layer of this annotation. */
-	private int fLayer;
-	
-	/**
-	 * Creates a new annotation.
-	 */
-	protected Annotation() {
-	}
-	
-	/**
-	 * Sets the layer of this annotation.
-	 *
-	 * @param layer the layer of this annotation
-	 */
-	protected void setLayer(int layer) {
-		fLayer= layer;
-	}	
+public class AnnotationPresentation {
 	
 	/**
 	 * Convenience method for drawing an image aligned inside a rectangle.
@@ -109,22 +84,62 @@ public abstract class Annotation {
 		drawImage(image, gc, canvas, r, align, SWT.CENTER);
 	}
 	
+	
+	protected Image fImage;
+	protected int fLayer;
+	
+	public AnnotationPresentation() {
+	}
+	
 	/**
-	 * Returns the annotations drawing layer.
-	 *
-	 * @return the annotations drawing layer
+	 * Returns the image for this presentation.
+	 * 
+	 * @return the image for this presentation
+	 */
+	public Image getImage() {
+		return fImage;
+	}
+
+	/**
+	 * Sets the image for this presentation.
+	 * 
+	 * @param image the image for this presentation
+	 */
+	public void setImage(Image image) {
+		fImage= image;
+	}
+
+	/**
+	 * Returns the layer for this annotation presentation. Annotations are considered
+	 * being located at layers and are considered being painted starting with
+	 * layer 0 upwards. Thus an annotation at layer 5 will be drawn on top of
+	 * all co-located annotations at the layers 4 - 0.
+	 * 
+	 * @return the layer of the given annotation
 	 */
 	public int getLayer() {
 		return fLayer;
 	}
-	
+
 	/**
-	 * Implement this method to draw a graphical representation 
-	 * of this annotation within the given bounds.
-	 *
+	 * Sets the layer for this presentation.
+	 * 
+	 * @param layer the layer
+	 * @see #getLayer()
+	 */
+	public void setLayer(int layer) {
+		fLayer= layer;
+	}
+
+	/**
+	 * Draws a graphical representation within the given bounds.
+	 * 
 	 * @param GC the drawing GC
 	 * @param canvas the canvas to draw on
 	 * @param bounds the bounds inside the canvas to draw on
 	 */
-	public abstract void paint(GC gc, Canvas canvas, Rectangle bounds);
+	public void paint(GC gc, Canvas canvas, Rectangle bounds) {
+		if (fImage != null)
+			drawImage(fImage, gc, canvas, bounds, SWT.CENTER, SWT.TOP);
+	}
 }

@@ -20,6 +20,8 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.util.PropertyChangeEvent;
 
+import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.AnnotationRulerColumn;
 import org.eclipse.jface.text.source.ChangeRulerColumn;
 import org.eclipse.jface.text.source.CompositeRuler;
@@ -118,7 +120,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 * Helper for accessing annotation from the perspective of this editor.
 	 * 
 	 * <p>This field should not be referenced by subclasses. It is <code>protected</code> for API
-	 * compatibility reasons and will be made <code>private</code> soon. Use 
+	 * compatibility reasons and will be made <code>private</code>. Use 
 	 * {@link #getAnnotationAccess()} instead.</p>
 	 */
 	protected IAnnotationAccess fAnnotationAccess;
@@ -156,7 +158,9 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	public ExtendedTextEditor() {
 		super();
 		fAnnotationPreferences= new MarkerAnnotationPreferences();
-		setRangeIndicator(new DefaultRangeIndicator());
+		Annotation rangeIndicator= new Annotation();
+		rangeIndicator.setData(AnnotationPresentation.class, new DefaultRangeIndicatorPresentation());
+		setRangeIndicator(rangeIndicator);
 		initializeKeyBindingScopes();
 		initializeEditor();
 	}
@@ -650,7 +654,9 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 */
 	protected CompositeRuler createCompositeRuler() {
 		CompositeRuler ruler= new CompositeRuler();
-		ruler.addDecorator(0, new AnnotationRulerColumn(VERTICAL_RULER_WIDTH));
+		AnnotationRulerColumn column= new AnnotationRulerColumn(VERTICAL_RULER_WIDTH);
+		column.setAnnotationAccess(getAnnotationAccess());
+		ruler.addDecorator(0, column);
 		
 		if (isLineNumberRulerVisible())
 			ruler.addDecorator(1, createLineNumberRulerColumn());
@@ -808,5 +814,13 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	protected MarkerAnnotationPreferences getAnnotationPreferences() {
 		return fAnnotationPreferences;
 	}
-
+	
+	/*
+	 * @see org.eclipse.core.runtime.IAdaptable#getAdapter(java.lang.Class)
+	 */
+	public Object getAdapter(Class required) {
+		if (IAnnotationAccess.class.equals(required))
+			return getAnnotationAccess();
+		return super.getAdapter(required);
+	}
 }

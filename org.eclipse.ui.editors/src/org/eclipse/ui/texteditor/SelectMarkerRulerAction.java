@@ -34,6 +34,9 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationPresentation;
+import org.eclipse.jface.text.source.IAnnotationAccess;
+import org.eclipse.jface.text.source.IAnnotationAccessExtension;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.jface.text.source.IVerticalRulerInfo;
@@ -135,6 +138,11 @@ public class SelectMarkerRulerAction extends ResourceAction implements IUpdate {
 		
 		AbstractMarkerAnnotationModel model= getAnnotationModel();
 		
+		IAnnotationAccessExtension access= null;
+		Object adapter= fTextEditor.getAdapter(IAnnotationAccess.class);
+		if (adapter instanceof IAnnotationAccessExtension)
+			access= (IAnnotationAccessExtension) adapter;
+		
 		IMarker marker= null;
 		int maxLayer= 0;
 		
@@ -142,9 +150,13 @@ public class SelectMarkerRulerAction extends ResourceAction implements IUpdate {
 		while (iter.hasNext()) {
 			IMarker m= (IMarker) iter.next();
 			Annotation a= model.getMarkerAnnotation(m);
-			// http://dev.eclipse.org/bugs/show_bug.cgi?id=18960
 			if (a != null) {
-				int l= a.getLayer();
+				if (access == null) {
+					marker= m;
+					break;
+				}
+				AnnotationPresentation presentation= access.getAnnotationPresentation(a);
+				int l= presentation.getLayer();
 				if (l == maxLayer) {
 					if (marker == null)
 						marker= m;
