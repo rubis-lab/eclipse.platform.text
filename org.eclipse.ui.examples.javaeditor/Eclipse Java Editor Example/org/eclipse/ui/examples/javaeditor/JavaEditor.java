@@ -38,7 +38,7 @@ public class JavaEditor extends TextEditor {
 	 * Default constructor.
 	 */
 	public JavaEditor() {
-		super();
+		setDocumentProvider(new JavaDocumentProvider());
 	}
 	
 	/** The <code>JavaEditor</code> implementation of this 
@@ -139,7 +139,7 @@ public class JavaEditor extends TextEditor {
 	 */
 	protected void initializeEditor() {
 		super.initializeEditor();
-		setSourceViewerConfiguration(new JavaSourceViewerConfiguration());
+		setSourceViewerConfiguration(new JavaSourceViewerConfiguration(this));
 		setEditorContextMenuId("#JavaEditorContext"); //$NON-NLS-1$
 		setRulerContextMenuId("#JavaRulerContext"); //$NON-NLS-1$
 	}

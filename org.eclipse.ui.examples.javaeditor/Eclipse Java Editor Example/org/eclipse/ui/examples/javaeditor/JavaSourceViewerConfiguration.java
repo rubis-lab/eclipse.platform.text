@@ -11,6 +11,8 @@
 package org.eclipse.ui.examples.javaeditor;
 
 
+import org.eclipse.core.runtime.NullProgressMonitor;
+
 import org.eclipse.swt.graphics.RGB;
 
 import org.eclipse.jface.text.DefaultAutoIndentStrategy;
@@ -23,6 +25,8 @@ import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.jface.text.presentation.IPresentationReconciler;
 import org.eclipse.jface.text.presentation.PresentationReconciler;
+import org.eclipse.jface.text.reconciler.IReconciler;
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
 import org.eclipse.jface.text.rules.BufferedRuleBasedScanner;
 import org.eclipse.jface.text.rules.DefaultDamagerRepairer;
 import org.eclipse.jface.text.rules.Token;
@@ -34,7 +38,10 @@ import org.eclipse.ui.examples.javaeditor.java.JavaAutoIndentStrategy;
 import org.eclipse.ui.examples.javaeditor.java.JavaCompletionProcessor;
 import org.eclipse.ui.examples.javaeditor.java.JavaDoubleClickSelector;
 import org.eclipse.ui.examples.javaeditor.javadoc.JavaDocCompletionProcessor;
+import org.eclipse.ui.examples.javaeditor.spelling.SpellCheckReconciler;
+import org.eclipse.ui.examples.javaeditor.spelling.SpellReconcileStrategy;
 import org.eclipse.ui.examples.javaeditor.util.JavaColorProvider;
+import org.eclipse.ui.texteditor.ITextEditor;
 
 /**
  * Example configuration for an <code>SourceViewer</code> which shows Java code.
@@ -51,11 +58,14 @@ public class JavaSourceViewerConfiguration extends SourceViewerConfiguration {
 			}
 		}
 		
+	private final ITextEditor fEditor;
 
 	/**
-	 * Default constructor.
+	 * Creates a new java source viewer configuration
+	 * @param editor The text editor
 	 */
-	public JavaSourceViewerConfiguration() {
+	public JavaSourceViewerConfiguration(ITextEditor editor) {
+		fEditor= editor;
 	}
 	
 	/* (non-Javadoc)
@@ -83,7 +93,7 @@ public class JavaSourceViewerConfiguration extends SourceViewerConfiguration {
 	 * Method declared on SourceViewerConfiguration
 	 */
 	public String[] getConfiguredContentTypes(ISourceViewer sourceViewer) {
-		return new String[] { IDocument.DEFAULT_CONTENT_TYPE, JavaPartitionScanner.JAVA_DOC, JavaPartitionScanner.JAVA_MULTILINE_COMMENT };
+		return new String[] { IDocument.DEFAULT_CONTENT_TYPE, JavaPartitionScanner.JAVA_DOC, JavaPartitionScanner.JAVA_MULTILINE_COMMENT, JavaPartitionScanner.JAVA_SINGLELINE_COMMENT };
 	}
 	
 	/* (non-Javadoc)
@@ -147,6 +157,10 @@ public class JavaSourceViewerConfiguration extends SourceViewerConfiguration {
 		reconciler.setDamager(dr, JavaPartitionScanner.JAVA_MULTILINE_COMMENT);
 		reconciler.setRepairer(dr, JavaPartitionScanner.JAVA_MULTILINE_COMMENT);
 
+		dr= new DefaultDamagerRepairer(new SingleTokenScanner(new TextAttribute(provider.getColor(JavaColorProvider.SINGLE_LINE_COMMENT))));
+		reconciler.setDamager(dr, JavaPartitionScanner.JAVA_SINGLELINE_COMMENT);
+		reconciler.setRepairer(dr, JavaPartitionScanner.JAVA_SINGLELINE_COMMENT);
+		
 		return reconciler;
 	}
 	
@@ -162,5 +176,28 @@ public class JavaSourceViewerConfiguration extends SourceViewerConfiguration {
 	 */
 	public ITextHover getTextHover(ISourceViewer sourceViewer, String contentType) {
 		return new JavaTextHover();
+	}
+
+	/* (non-Javadoc)
+	 * @see org.eclipse.jface.text.source.SourceViewerConfiguration#getReconciler(org.eclipse.jface.text.source.ISourceViewer)
+	 */
+	public IReconciler getReconciler(ISourceViewer sourceViewer) {
+
+		if (fEditor != null && fEditor.isEditable()) {
+
+			final SpellCheckReconciler reconciler= new SpellCheckReconciler(fEditor);
+			final IReconcilingStrategy strategy= new SpellReconcileStrategy(fEditor, getConfiguredDocumentPartitioning(sourceViewer));
+
+			reconciler.addReconcilingStrategy(strategy, JavaPartitionScanner.JAVA_DOC);
+			reconciler.addReconcilingStrategy(strategy, JavaPartitionScanner.JAVA_MULTILINE_COMMENT);
+			reconciler.addReconcilingStrategy(strategy, JavaPartitionScanner.JAVA_SINGLELINE_COMMENT);
+			
+			reconciler.setIsIncrementalReconciler(false);
+			reconciler.setProgressMonitor(new NullProgressMonitor());
+			reconciler.setDelay(500);
+
+			return reconciler;
+		}
+		return null;
 	}
 }

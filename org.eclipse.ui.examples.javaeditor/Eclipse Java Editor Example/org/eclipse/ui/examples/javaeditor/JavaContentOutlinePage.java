@@ -33,16 +33,16 @@ public class JavaContentOutlinePage extends ContentOutlinePage {
 	 * A segment element.
 	 */
 	protected static class Segment {
-		public String name;
-		public Position position;
+		public String fName;
+		public Position fPosition;
 
 		public Segment(String name, Position position) {
-			this.name= name;
-			this.position= position;
+			this.fName= name;
+			this.fPosition= position;
 		}
 
 		public String toString() {
-			return name;
+			return fName;
 		}
 	}
 
@@ -200,8 +200,8 @@ public class JavaContentOutlinePage extends ContentOutlinePage {
 			fTextEditor.resetHighlightRange();
 		else {
 			Segment segment= (Segment) ((IStructuredSelection) selection).getFirstElement();
-			int start= segment.position.getOffset();
-			int length= segment.position.getLength();
+			int start= segment.fPosition.getOffset();
+			int length= segment.fPosition.getLength();
 			try {
 				fTextEditor.setHighlightRange(start, length, true);
 			} catch (IllegalArgumentException x) {

@@ -21,10 +21,6 @@ import org.eclipse.jface.text.rules.*;
  */
 public class JavaPartitionScanner extends RuleBasedPartitionScanner {
 
-	public final static String JAVA_MULTILINE_COMMENT= "__java_multiline_comment"; //$NON-NLS-1$
-	public final static String JAVA_DOC= "__java_javadoc"; //$NON-NLS-1$
-	public final static String[] JAVA_PARTITION_TYPES= new String[] { JAVA_MULTILINE_COMMENT, JAVA_DOC };
-
 	/**
 	 * Detector for empty comments.
 	 */
@@ -73,6 +69,11 @@ public class JavaPartitionScanner extends RuleBasedPartitionScanner {
 		}
 	}
 
+	public final static String JAVA_SINGLELINE_COMMENT= "__java_singleline_comment"; //$NON-NLS-1$
+	public final static String JAVA_DOC= "__java_javadoc"; //$NON-NLS-1$
+	public final static String JAVA_MULTILINE_COMMENT= "__java_multiline_comment"; //$NON-NLS-1$
+	public final static String[] JAVA_PARTITION_TYPES= new String[] { JAVA_SINGLELINE_COMMENT, JAVA_MULTILINE_COMMENT, JAVA_DOC };
+
 	/**
 	 * Creates the partitioner and sets up the appropriate rules.
 	 */
@@ -81,11 +82,12 @@ public class JavaPartitionScanner extends RuleBasedPartitionScanner {
 
 		IToken javaDoc= new Token(JAVA_DOC);
 		IToken comment= new Token(JAVA_MULTILINE_COMMENT);
+		IToken single= new Token(JAVA_SINGLELINE_COMMENT);
 
 		List rules= new ArrayList();
 
 		// Add rule for single line comments.
-		rules.add(new EndOfLineRule("//", Token.UNDEFINED)); //$NON-NLS-1$
+		rules.add(new EndOfLineRule("//", single)); //$NON-NLS-1$
 
 		// Add rule for strings and character constants.
 		rules.add(new SingleLineRule("\"", "\"", Token.UNDEFINED, '\\')); //$NON-NLS-2$ //$NON-NLS-1$

@@ -39,5 +39,27 @@
             class="org.eclipse.ui.examples.javaeditor.JavaDocumentSetupParticipant">
       </participant>
    </extension>
-
+   <extension
+          point="org.eclipse.ui.workbench.texteditor.markerAnnotationSpecification">
+      <specification
+      		annotationType="org.eclipse.ui.workbench.texteditor.spelling"
+            label="%spelling.label"
+            markerType="org.eclipse.core.resources.problemmarker"
+            markerSeverity="1"
+            textPreferenceKey="warningIndication"
+            textPreferenceValue="true"
+            overviewRulerPreferenceKey="warningIndicationInOverviewRuler"
+            overviewRulerPreferenceValue="true"
+            colorPreferenceKey="warningIndicationColor"
+            colorPreferenceValue="244,200,45"
+            presentationLayer="5"
+            contributesToHeader="true"
+            showInNextPrevDropdownToolbarActionKey="showWarningInNextPrevDropdownToolbarAction"
+            showInNextPrevDropdownToolbarAction="true"
+            isGoToNextNavigationTargetKey="isWarningGoToNextNavigationTarget"
+            isGoToNextNavigationTarget="true"
+            isGoToPreviousNavigationTargetKey="isWarningGoToPreviousNavigationTarget"
+            isGoToPreviousNavigationTarget="true">
+      </specification>
+     </extension>
 </plugin>
