@@ -105,11 +105,6 @@ public class AnnotationRulerColumn implements IVerticalRulerColumn {
 	/** Switch for enabling/disabling the setModel method. */
 	private boolean fAllowSetModel= true;
 	/**
-	 * The annotation access.
-	 * @since 3.0
-	 */
-	private IAnnotationAccess fAnnotationAccess;
-	/**
 	 * The list of annotation types to be shown in this ruler.
 	 * @since 3.0
 	 */

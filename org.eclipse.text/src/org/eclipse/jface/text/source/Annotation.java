@@ -68,7 +68,7 @@ public class Annotation {
 	}
 	
 	/**
-	 * Sets the adaper of this annotation for the given key. If the <code>key</code>
+	 * Sets the adapter of this annotation for the given key. If the <code>key</code>
 	 * is <code>null</code> any adapter stored under the given key is
 	 * removed.
 	 * 

@@ -27,6 +27,8 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationPresentation;
 import org.eclipse.jface.text.source.AnnotationRulerColumn;
 import org.eclipse.jface.text.source.ChangeRulerColumn;
 import org.eclipse.jface.text.source.CompositeRuler;
@@ -692,8 +694,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	 */
 	protected CompositeRuler createCompositeRuler() {
 		CompositeRuler ruler= new CompositeRuler();
-		AnnotationRulerColumn column= new AnnotationRulerColumn(VERTICAL_RULER_WIDTH);
-		column.setAnnotationAccess(getAnnotationAccess());
+		AnnotationRulerColumn column= new AnnotationRulerColumn(VERTICAL_RULER_WIDTH, getAnnotationAccess());
 		ruler.addDecorator(0, column);
 		
 		if (isLineNumberRulerVisible())
@@ -980,7 +981,7 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 	public Object getAdapter(Class adapter) {
 		if (IGotoMarker.class.equals(adapter))
 			return fGotoMarkerAdapter;
-		if (IAnnotationAccess.class.equals(required))
+		if (IAnnotationAccess.class.equals(adapter))
 			return getAnnotationAccess();
 		return super.getAdapter(adapter);
 	}
