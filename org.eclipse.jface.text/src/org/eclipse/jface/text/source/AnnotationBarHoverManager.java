@@ -48,7 +48,7 @@ import org.eclipse.jface.text.ITextViewerExtension3;
  * @since 2.0
  */
 public class AnnotationBarHoverManager extends AbstractHoverInformationControlManager {
-	public static final boolean USE_RADIAL_LAYOUT= true;
+	public static final boolean USE_RADIAL_LAYOUT= false;
 
 	/**
 	 * The  information control closer for the hover information. Closes the information control as 

@@ -223,12 +223,12 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	private void updatePainting() {
 		disablePainting(true);
 		
-		// Add background to style ranges
+		// remove background from style ranges
 		applyBackground(false); // faster than invalidateTextPresentation();
 		
 		catchupWithModel();							
 		
-		// Remove background from style ranges
+		// add background to style ranges
 		applyBackground(true);
 		
 		enablePainting();
@@ -237,7 +237,7 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 	private void applyBackground(boolean highlight) {
 		for (Iterator iter= fHighlightedDecorations.iterator(); iter.hasNext();) {
 
-			Decoration pp = (Decoration)iter.next();
+			Decoration pp = (Decoration) iter.next();
 			Position p= pp.fPosition;
 			if (!fSourceViewer.overlapsWithVisibleRegion(p.offset, p.length))
 				continue;
@@ -270,7 +270,7 @@ public class AnnotationPainter implements IPainter, PaintListener, IAnnotationMo
 					fStyleRanges.add(usr);
 					newStyleRanges.add(usr);
 				}
-				styleRanges= (StyleRange[])newStyleRanges.toArray(new StyleRange[newStyleRanges.size()]);
+				styleRanges= (StyleRange[]) newStyleRanges.toArray(new StyleRange[newStyleRanges.size()]);
 				fTextWidget.replaceStyleRanges(r.getOffset(), r.getLength(), styleRanges);
 			}
 		}

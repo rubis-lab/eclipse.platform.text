@@ -396,8 +396,8 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		fComposite= new Composite(fShell, SWT.NONE);
 		
 		GridLayout layout= new GridLayout(1, true);
-		layout.marginHeight= 0;
-		layout.marginWidth= 0;
+		layout.marginHeight= 1;
+		layout.marginWidth= 1;
 		fShell.setLayout(layout);
 		fComposite.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_CENTER | GridData.VERTICAL_ALIGN_CENTER));
 		fComposite.addMouseTrackListener(new MouseTrackAdapter() {
