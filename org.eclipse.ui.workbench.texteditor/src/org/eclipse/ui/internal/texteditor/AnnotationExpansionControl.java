@@ -10,7 +10,14 @@
  *******************************************************************************/
 package org.eclipse.ui.internal.texteditor;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.MenuEvent;
@@ -46,7 +53,13 @@ import org.eclipse.jface.text.IInformationControlCreator;
 import org.eclipse.jface.text.IInformationControlExtension;
 import org.eclipse.jface.text.IInformationControlExtension2;
 import org.eclipse.jface.text.IInformationControlExtension3;
+import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.IViewportListener;
+import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.Region;
+import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.IVerticalRulerInfo;
 
@@ -64,6 +77,11 @@ import org.eclipse.ui.texteditor.IAnnotationListener;
  */
 public class AnnotationExpansionControl implements IInformationControl, IInformationControlExtension, IInformationControlExtension2, IInformationControlExtension3 {
 
+	
+	public interface ICallback {
+		void run(IInformationControlExtension2 control);
+	}
+	
 	/**
 	 * Input used by the control to display the annotations.
 	 * TODO move to top-level class
@@ -77,20 +95,23 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		public IVerticalRulerInfo fRulerInfo;
 		public IAnnotationListener fAnnotationListener;
 		public IDoubleClickListener fDoubleClickListener;
+		public ICallback redoAction;
+		public IAnnotationModel model;
 	}
 	
 	private final class Item {
 		Annotation fAnnotation;
 		Canvas canvas;
+		StyleRange[] oldStyles;
 		
 		public void selected() {
 			Display disp= fShell.getDisplay();
 			canvas.setCursor(fHandCursor);
 			// TODO: shade - for now: set grey background
-			canvas.setBackground(disp.getSystemColor(SWT.COLOR_GRAY));
+			canvas.setBackground(getSelectionColor(disp));
 			
-			// TODO: if the annotation's position is not the entire line, then 
 			// hightlight the viewer background at its position
+			oldStyles= setViewerBackground(fAnnotation);
 			
 			// set the selection
 			fSelection= this;
@@ -124,13 +145,34 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			// deselect
 			fSelection= null;
 			
+			resetViewerBackground(oldStyles);
+			oldStyles= null;
+			
 			Display disp= fShell.getDisplay();
 			canvas.setCursor(null);
 			// TODO: remove shading - for now: set standard background
 			canvas.setBackground(disp.getSystemColor(SWT.COLOR_INFO_BACKGROUND));
 			
 		}
-		
+
+	}
+	
+	/**
+	 * Disposes of an item 
+	 */
+	private final class MyDisposeListener implements DisposeListener {
+		/*
+		 * @see org.eclipse.swt.events.DisposeListener#widgetDisposed(org.eclipse.swt.events.DisposeEvent)
+		 */
+		public void widgetDisposed(DisposeEvent e) {
+			Item item= (Item) ((Widget) e.getSource()).getData();
+			item.deselect();
+			item.canvas= null;
+			item.fAnnotation= null;
+			item.oldStyles= null;
+			
+			((Widget) e.getSource()).setData(null);
+		}
 	}
 	
 	/**
@@ -179,8 +221,11 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			Item item= (Item) ((Widget) e.getSource()).getData();
 			if (e.button == 1 && item.fAnnotation == fInput.fAnnotations[0] && fInput.fDoubleClickListener != null) {
 				fInput.fDoubleClickListener.doubleClick(null);
+				// special code for JDT to renew the annotation set.
+				if (fInput.redoAction != null)
+					fInput.redoAction.run(AnnotationExpansionControl.this);
 			}
-			dispose();
+//			dispose();
 			// TODO special action to invoke double-click action on the vertical ruler
 			// how about
 //					Canvas can= (Canvas) e.getSource();
@@ -317,6 +362,8 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 	private final MyMouseTrackListener fMouseTrackListener;
 	private final MyMouseListener fMouseListener;
 	private final MyMenuDetectListener fMenuDetectListener;
+	private final DisposeListener fDisposeListener;
+	private final IViewportListener fViewportListener;
 	
 	
 	public AnnotationExpansionControl(Shell parent, int shellStyle) {
@@ -324,6 +371,14 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		fMouseTrackListener= new MyMouseTrackListener();
 		fMouseListener= new MyMouseListener();
 		fMenuDetectListener= new MyMenuDetectListener();
+		fDisposeListener= new MyDisposeListener();
+		fViewportListener= new IViewportListener() {
+
+			public void viewportChanged(int verticalOffset) {
+				dispose();
+			}
+			
+		};
 		
 		fShell= new Shell(parent, shellStyle);
 		Display display= fShell.getDisplay();
@@ -372,11 +427,14 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 	 * @see org.eclipse.jface.text.IInformationControlExtension2#setInput(java.lang.Object)
 	 */
 	public void setInput(Object input) {
+		if (fInput != null && fInput.fViewer != null)
+			fInput.fViewer.removeViewportListener(fViewportListener);
+		
 		if (input instanceof AnnotationHoverInput)
 			fInput= (AnnotationHoverInput) input;
 		else
 			fInput= null;
-		
+
 		inputChanged(fInput, null);
 	}
 
@@ -384,11 +442,17 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		refresh();
 	}
 
-	private void refresh() {
+	protected void refresh() {
 		adjustItemNumber();
+		
+		if (fInput == null)
+			return;
 
 		if (fInput.fAnnotations == null)
 			return;
+		
+		if (fInput.fViewer != null)
+			fInput.fViewer.addViewportListener(fViewportListener);
 		
 		// simple layout: a row of items
 		GridLayout layout= new GridLayout(fInput.fAnnotations.length, true);
@@ -410,11 +474,13 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 		
 	}
 
-	private void adjustItemNumber() {
+	protected void adjustItemNumber() {
+		if (fComposite == null)
+			return;	
 		
 		Control[] children= fComposite.getChildren();
 		int oldSize= children.length;
-		int newSize= fInput.fAnnotations.length;
+		int newSize= fInput == null ? 0 : fInput.fAnnotations.length;
 		
 		Display display= fShell.getDisplay();
 		
@@ -434,10 +500,14 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 			canvas.addMouseListener(fMouseListener);
 			
 			canvas.addListener(SWT.MenuDetect, fMenuDetectListener);
+			
+			canvas.addDisposeListener(fDisposeListener);
 		}
 		
 		// dispose of exceeding resources 
 		for (int i= oldSize; i > newSize; i--) {
+			Item item= (Item) children[i - 1].getData();
+			item.deselect();
 			children[i - 1].dispose();
 		}
 		
@@ -577,4 +647,100 @@ public class AnnotationExpansionControl implements IInformationControl, IInforma
 	public boolean isMouseController() {
 		return true;
 	}
+
+	private StyleRange[] setViewerBackground(Annotation annotation) {
+		StyledText text= fInput.fViewer.getTextWidget();
+		if (text == null || text.isDisposed())
+			return null;
+		
+		Display disp= text.getDisplay();
+		
+		Position pos= fInput.model.getPosition(annotation);
+		if (pos == null)
+			return null;
+		
+		IRegion region= ((TextViewer)fInput.fViewer).modelRange2WidgetRange(new Region(pos.offset, pos.length));
+		
+		StyleRange[] ranges= text.getStyleRanges(region.getOffset(), region.getLength());
+		
+		List undoRanges= new ArrayList(ranges.length);
+		for (int i= 0; i < ranges.length; i++) {
+			undoRanges.add(ranges[i].clone());
+		}
+		
+		int offset= region.getOffset();
+		StyleRange current= undoRanges.size() > 0 ? (StyleRange) undoRanges.get(0) : null;
+		int curStart= current != null ? current.start : region.getOffset() + region.getLength();
+		int curEnd= current != null ? current.start + current.length : -1;
+		int index= 0;
+		
+		// fill no-style regions
+		while (curEnd < region.getOffset() + region.getLength()) {
+			// add empty range
+			if (curStart > offset) {
+				StyleRange undoRange= new StyleRange(offset, curStart - offset, null, null);
+				undoRanges.add(index, undoRange);
+				index++;
+			}
+			
+			// step
+			index++;
+			if (index < undoRanges.size()) {
+				offset= curEnd;
+				current= (StyleRange) undoRanges.get(index);
+				curStart= current.start;
+				curEnd= current.start + current.length;
+			} else if (index == undoRanges.size()) {
+				// last one
+				offset= curEnd;
+				current= null;
+				curStart= region.getOffset() + region.getLength();
+				curEnd= -1;
+			} else
+				curEnd= region.getOffset() + region.getLength();
+		}
+		
+		// create modified styles (with background)
+		List shadedRanges= new ArrayList(undoRanges.size());
+		for (Iterator it= undoRanges.iterator(); it.hasNext(); ) {
+			StyleRange range= (StyleRange) ((StyleRange) it.next()).clone();
+			shadedRanges.add(range);
+			range.background= getHighlightColor(disp);
+		}
+		
+		// set the ranges one by one
+		for (Iterator iter= shadedRanges.iterator(); iter.hasNext(); ) {
+			text.setStyleRange((StyleRange) iter.next());
+			
+		}
+		
+		return (StyleRange[]) undoRanges.toArray(undoRanges.toArray(new StyleRange[0]));
+	}
+
+	private void resetViewerBackground(StyleRange[] oldRanges) {
+		
+		if (oldRanges == null)
+			return;
+		
+		if (fInput == null)
+			return;
+		
+		StyledText text= fInput.fViewer.getTextWidget();
+		if (text == null || text.isDisposed())
+			return;
+		
+		// set the ranges one by one
+		for (int i= 0; i < oldRanges.length; i++) {
+			text.setStyleRange(oldRanges[i]);
+		}
+	}
+	
+	private Color getHighlightColor(Display disp) {
+		return disp.getSystemColor(SWT.COLOR_GRAY);
+	}
+
+	private Color getSelectionColor(Display disp) {
+		return disp.getSystemColor(SWT.COLOR_GRAY);
+	}
+
 }

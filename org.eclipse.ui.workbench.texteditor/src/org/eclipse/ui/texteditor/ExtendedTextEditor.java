@@ -21,6 +21,8 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 
 import org.eclipse.jface.text.source.AnnotationRulerColumn;
 import org.eclipse.jface.text.source.ChangeRulerColumn;
@@ -41,6 +43,7 @@ import org.eclipse.jface.text.source.LineNumberRulerColumn;
 import org.eclipse.jface.text.source.OverviewRuler;
 import org.eclipse.jface.text.source.SourceViewer;
 
+import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.texteditor.quickdiff.QuickDiff;
 
 import org.eclipse.ui.internal.texteditor.AnnotationExpandHover;
@@ -643,24 +646,47 @@ public abstract class ExtendedTextEditor extends StatusTextEditor {
 		column.setHover(new AnnotationExpandHover(ruler, new IAnnotationListener() {
 
 			public void annotationSelected(AnnotationEvent event) {
-				// TODO forward to any registered annotation listeners!
+				// forward to any registered annotation listeners!
+				for (Iterator it= fAnnotationListeners.iterator(); it.hasNext(); ) {
+					IAnnotationListener listener= (IAnnotationListener) it.next();
+					listener.annotationSelected(event);
+				}
 			}
 
 			public void annotationDefaultSelected(AnnotationEvent event) {
-				// TODO forward to any registered annotation listeners
+				// forward to any registered annotation listeners
+				for (Iterator it= fAnnotationListeners.iterator(); it.hasNext(); ) {
+					IAnnotationListener listener= (IAnnotationListener) it.next();
+					listener.annotationDefaultSelected(event);
+				}
 				// for now: just invoke ruler click action
-				triggerAction(ITextEditorActionConstants.RULER_CLICK);
+//				triggerAction(ITextEditorActionConstants.RULER_CLICK);
 			}
 
 			public void annotationContextMenuAboutToShow(AnnotationEvent event, Menu menu) {
-				// TODO forward to any registered annotation listeners!
+				// forward to any registered annotation listeners!
+				for (Iterator it= fAnnotationListeners.iterator(); it.hasNext(); ) {
+					IAnnotationListener listener= (IAnnotationListener) it.next();
+					listener.annotationContextMenuAboutToShow(event, menu);
+				}
 			}
-	
+			
+		}, new IDoubleClickListener() {
+
+			public void doubleClick(DoubleClickEvent event) {
+				// for now: just invoke ruler double click action
+				triggerAction(ITextEditorActionConstants.RULER_DOUBLE_CLICK);
+			}
+
 			private void triggerAction(String actionID) {
 				IAction action= getAction(actionID);
 				if (action != null) {
 					if (action instanceof IUpdate)
 						((IUpdate) action).update();
+					// hack to propagate line change
+					if (action instanceof ISelectionListener) {
+						((ISelectionListener)action).selectionChanged(null, null);
+					}
 					if (action.isEnabled())
 						action.run();
 				}

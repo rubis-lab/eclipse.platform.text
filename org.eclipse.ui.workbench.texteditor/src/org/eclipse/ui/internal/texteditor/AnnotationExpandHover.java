@@ -23,6 +23,8 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Shell;
 
+import org.eclipse.jface.viewers.IDoubleClickListener;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IInformationControl;
@@ -59,7 +61,7 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 		 * @see org.eclipse.jface.text.IInformationControlCreator#createInformationControl(org.eclipse.swt.widgets.Shell)
 		 */
 		public IInformationControl createInformationControl(Shell parent) {
-			return new AnnotationExpansionControl(parent, SWT.NONE);
+			return new AnnotationExpansionControl(parent, SWT.NO_TRIM);
 		}
 
 		/*
@@ -80,6 +82,8 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 	private static final IInformationControlCreator fgCreator= new InformationControlCreator();
 	protected IVerticalRulerInfo fVerticalRulerInfo;
 	protected IAnnotationListener fAnnotationListener; 
+
+	protected IDoubleClickListener fDblClickListener;
 	
 	/**
 	 * Creates a new hover instance.
@@ -87,16 +91,17 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 	 * @param ruler
 	 * @param listener
 	 */
-	public AnnotationExpandHover(IVerticalRulerInfo ruler, IAnnotationListener listener) {
+	public AnnotationExpandHover(IVerticalRulerInfo ruler, IAnnotationListener listener, IDoubleClickListener doubleClickListener) {
 		fAnnotationListener= listener;
 		fVerticalRulerInfo= ruler;
+		fDblClickListener= doubleClickListener;
 	}
 
 	/**
 	 * @param ruler
 	 */
 	public AnnotationExpandHover(IVerticalRulerInfo ruler) {
-		this(ruler, null);
+		this(ruler, null, null);
 	}
 
 	/*
@@ -135,6 +140,9 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 			}
 		}
 		
+		if (exact.size() <= 1)
+			return null;
+		
 		sort(exact, model);
 		
 		if (exact.size() > 0)
@@ -145,6 +153,8 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 		input.fViewer= viewer;
 		input.fRulerInfo= fVerticalRulerInfo;
 		input.fAnnotationListener= fAnnotationListener;
+		input.fDoubleClickListener= fDblClickListener;
+		input.model= model;
 		
 		return input;
 	}
@@ -264,7 +274,5 @@ public class AnnotationExpandHover implements IAnnotationHover, IAnnotationHover
 		// use default implementation
 		return null;
 	}
-	
-	
 
 }

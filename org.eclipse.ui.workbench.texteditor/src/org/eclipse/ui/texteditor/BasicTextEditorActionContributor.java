@@ -62,7 +62,8 @@ public class BasicTextEditorActionContributor extends EditorActionBarContributor
 		ITextEditorActionConstants.BOOKMARK,
 		ITextEditorActionConstants.ADD_TASK,
 		ITextEditorActionConstants.PRINT,
-		ITextEditorActionConstants.REVERT
+		ITextEditorActionConstants.REVERT,
+		"AnnotationAction"
 	};
 	
 	/**
