@@ -4372,6 +4372,9 @@ public abstract class AbstractTextEditor extends EditorPart implements ITextEdit
 			
 		} else if (fStatusFields != null)
 			fStatusFields.remove(category);
+		
+		if (fIncrementalFindTarget != null && ITextEditorActionConstants.STATUS_CATEGORY_FIND_FIELD.equals(category))
+			fIncrementalFindTarget.setStatusField(field);
 	}
 	
 	/**
