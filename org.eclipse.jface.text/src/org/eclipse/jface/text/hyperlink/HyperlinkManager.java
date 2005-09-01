@@ -25,8 +25,9 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 
 import org.eclipse.jface.text.Assert;
 import org.eclipse.jface.text.IRegion;
@@ -40,7 +41,7 @@ import org.eclipse.jface.text.Region;
  *
  * @since 3.1
  */
-public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveListener, FocusListener {
+public class HyperlinkManager implements Listener, KeyListener, MouseListener, MouseMoveListener, FocusListener {
 
 	/**
 	 * Detection strategy.
@@ -145,6 +146,7 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 		if (text == null || text.isDisposed())
 			return;
 
+		text.getDisplay().addFilter(SWT.KeyUp, this);
 		text.addKeyListener(this);
 		text.addMouseListener(this);
 		text.addMouseMoveListener(this);
@@ -196,6 +198,7 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 		StyledText text= fTextViewer.getTextWidget();
 		if (text != null && !text.isDisposed()) {
 			text.removeKeyListener(this);
+			text.getDisplay().removeFilter(SWT.KeyUp, this);
 			text.removeMouseListener(this);
 			text.removeMouseMoveListener(this);
 			text.removeFocusListener(this);
@@ -208,9 +211,6 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 	}
 
 	protected void deactivate() {
-		if (!fActive)
-			return;
-
 		fHyperlinkPresenter.hideHyperlinks();
 		fActive= false;
 	}
@@ -318,7 +318,7 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 
 		fActive= true;
 
-//			removed for #25871
+//			removed for #25871 (hyperlinks could interact with typing)
 //
 //			ITextViewer viewer= getSourceViewer();
 //			if (viewer == null)
@@ -336,11 +336,6 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 	 * @see org.eclipse.swt.events.KeyListener#keyReleased(org.eclipse.swt.events.KeyEvent)
 	 */
 	public void keyReleased(KeyEvent event) {
-
-		if (!fActive)
-			return;
-
-		deactivate();
 	}
 
 	/*
@@ -393,17 +388,14 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 	 */
 	public void mouseMove(MouseEvent event) {
 
-		if (event.widget instanceof Control && !((Control) event.widget).isFocusControl()) {
-			deactivate();
+		if (event.stateMask != fHyperlinkStateMask) {
+			if (fActive)
+				deactivate();
+			
 			return;
 		}
-
-		if (!fActive) {
-			if (event.stateMask != fHyperlinkStateMask)
-				return;
-			// modifier was already pressed
-			fActive= true;
-		}
+		
+		fActive= true;
 
 		StyledText text= fTextViewer.getTextWidget();
 		if (text == null || text.isDisposed()) {
@@ -423,8 +415,9 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 		}
 
 		fHyperlinkPresenter.showHyperlinks(fActiveHyperlinks);
-	}
 
+	}
+	
 	/*
 	 * @see org.eclipse.swt.events.FocusListener#focusGained(org.eclipse.swt.events.FocusEvent)
 	 */
@@ -434,6 +427,14 @@ public class HyperlinkManager implements KeyListener, MouseListener, MouseMoveLi
 	 * @see org.eclipse.swt.events.FocusListener#focusLost(org.eclipse.swt.events.FocusEvent)
 	 */
 	public void focusLost(FocusEvent event) {
+		deactivate();
+	}
+
+	/*
+	 * @see org.eclipse.swt.widgets.Listener#handleEvent(org.eclipse.swt.widgets.Event)
+	 * @since 3.1
+	 */
+	public void handleEvent(Event event) {
 		deactivate();
 	}
 }
