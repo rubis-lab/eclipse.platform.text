@@ -23,15 +23,21 @@ import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
@@ -39,6 +45,7 @@ import org.eclipse.swt.widgets.TableItem;
 
 import org.eclipse.jface.contentassist.IContentAssistSubjectControl;
 
+import org.eclipse.jface.text.Assert;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -201,6 +208,9 @@ class CompletionProposalPopup implements IContentAssistListener {
 	 * @since 3.1.1
 	 */
 	private boolean fIsFilterPending= false;
+	private Label fMessageText;
+	private int fLastCompletionOffset;
+	private Font fMessageTextFont;
 
 
 	/**
@@ -248,7 +258,8 @@ class CompletionProposalPopup implements IContentAssistListener {
 		final Control control= fContentAssistSubjectControlAdapter.getControl();
 
 		if (!Helper.okToUse(fProposalShell) && control != null && !control.isDisposed()) {
-
+			fContentAssistant.resetRepetition();
+			
 			// add the listener before computing the proposals so we don't move the caret
 			// when the user types fast.
 			fContentAssistSubjectControlAdapter.addKeyListener(fKeyListener);
@@ -258,6 +269,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 					fInvocationOffset= fContentAssistSubjectControlAdapter.getSelectedRange().x;
 					fFilterOffset= fInvocationOffset;
+					fLastCompletionOffset= fFilterOffset;
 					fComputedProposals= computeProposals(fInvocationOffset);
 
 					int count= (fComputedProposals == null ? 0 : fComputedProposals.length);
@@ -271,10 +283,8 @@ class CompletionProposalPopup implements IContentAssistListener {
 					} else {
 
 						if (count == 1 && !autoActivated && canAutoInsert(fComputedProposals[0])) {
-
 							insertProposal(fComputedProposals[0], (char) 0, 0, fInvocationOffset);
 							hide();
-
 						} else {
 							createProposalSelector();
 							setProposals(fComputedProposals, false);
@@ -283,9 +293,29 @@ class CompletionProposalPopup implements IContentAssistListener {
 					}
 				}
 			});
+		} else {
+			if (fLastCompletionOffset == fFilterOffset) {
+				handleRepeatedInvocation();
+			} else {
+				fLastCompletionOffset= fFilterOffset;
+			}
+			
 		}
 
 		return getErrorMessage();
+	}
+
+	private void handleRepeatedInvocation() {
+		ICompletionProposal[] recomputed= null;
+		do {
+			if (fContentAssistant.recomputeOnRepetition()) {
+				recomputed= computeProposals(fFilterOffset);
+			} else {
+				break;
+			}
+		} while (recomputed == null || recomputed.length == 0);
+		if (recomputed != null)
+			setProposals(recomputed, false);
 	}
 
 	/**
@@ -334,15 +364,28 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 		fProposalTable.setLocation(0, 0);
 		if (fAdditionalInfoController != null)
-			fAdditionalInfoController.setSizeConstraints(50, 10, true, false);
+			fAdditionalInfoController.setSizeConstraints(50, 10, true, true);
 
 		GridLayout layout= new GridLayout();
 		layout.marginWidth= 0;
 		layout.marginHeight= 0;
+		layout.verticalSpacing= 1;
 		fProposalShell.setLayout(layout);
 
-		GridData data= new GridData(GridData.FILL_BOTH);
+		fMessageText= new Label(fProposalShell, SWT.NONE);
+		GridData textData= new GridData(SWT.FILL, SWT.BOTTOM, true, false);
+		fMessageText.setLayoutData(textData);
+		fMessageText.setText(fContentAssistant.getMessage());
+		Font font= fMessageText.getFont();
+		Display display= fProposalShell.getDisplay();
+		FontData[] fontDatas= font.getFontData();
+		for (int i= 0; i < fontDatas.length; i++)
+			fontDatas[i].setHeight(fontDatas[i].getHeight() * 9 / 10);
+		fMessageTextFont= new Font(display, fontDatas);
+		fMessageText.setFont(fMessageTextFont);
+		fMessageText.setCursor(fProposalShell.getDisplay().getSystemCursor(SWT.CURSOR_HAND));
 
+		GridData data= new GridData(GridData.FILL_BOTH);
 
 		Point size= fContentAssistant.restoreCompletionProposalPopupSize();
 		if (size != null) {
@@ -353,6 +396,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 			data.widthHint= 300;
 			fProposalTable.setLayoutData(data);
 			fProposalShell.pack();
+			fSize= fProposalShell.getSize();
 		}
 
 		fProposalShell.addControlListener(new ControlListener() {
@@ -368,14 +412,15 @@ class CompletionProposalPopup implements IContentAssistListener {
 				fSize= fProposalShell.getSize();
 			}
 		});
-
+		
 		if (!"carbon".equals(SWT.getPlatform())) //$NON-NLS-1$
-			fProposalShell.setBackground(control.getDisplay().getSystemColor(SWT.COLOR_BLACK));
+			fProposalShell.setBackground(control.getDisplay().getSystemColor(SWT.COLOR_GRAY));
 
 		Color c= fContentAssistant.getProposalSelectorBackground();
 		if (c == null)
 			c= control.getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 		fProposalTable.setBackground(c);
+		fMessageText.setBackground(c);
 
 		c= fContentAssistant.getProposalSelectorForeground();
 		if (c == null)
@@ -401,6 +446,16 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 		fProposalTable.setHeaderVisible(false);
 		fContentAssistant.addToLayout(this, fProposalShell, ContentAssistant.LayoutManager.LAYOUT_PROPOSAL_SELECTOR, fContentAssistant.getSelectionOffset());
+		
+		fMessageText.addMouseListener(new MouseAdapter() {
+			public void mouseUp(MouseEvent e) {
+				fLastCompletionOffset= fFilterOffset;
+				handleRepeatedInvocation();
+			}
+		
+			public void mouseDown(MouseEvent e) {
+			}
+		});
 	}
 
 	/*
@@ -580,6 +635,13 @@ class CompletionProposalPopup implements IContentAssistListener {
 			fProposalShell.dispose();
 			fProposalShell= null;
 		}
+		
+		if (fMessageTextFont != null) {
+			fMessageTextFont.dispose();
+			fMessageTextFont= null;
+		}
+		
+		fLastCompletionOffset= -1;
 	}
 
 	/**
@@ -1032,7 +1094,11 @@ class CompletionProposalPopup implements IContentAssistListener {
 	 */
 	public String incrementalComplete() {
 		if (Helper.okToUse(fProposalShell) && fFilteredProposals != null) {
-			completeCommonPrefix();
+			if (fLastCompletionOffset == fFilterOffset) {
+				handleRepeatedInvocation();
+			} else {
+				completeCommonPrefix();
+			}
 		} else {
 			final Control control= fContentAssistSubjectControlAdapter.getControl();
 
@@ -1047,6 +1113,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 					fInvocationOffset= fContentAssistSubjectControlAdapter.getSelectedRange().x;
 					fFilterOffset= fInvocationOffset;
+					fLastCompletionOffset= fFilterOffset;
 					fFilteredProposals= computeProposals(fInvocationOffset);
 
 					int count= (fFilteredProposals == null ? 0 : fFilteredProposals.length);
@@ -1202,6 +1269,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 			fContentAssistSubjectControlAdapter.setSelectedRange(fFilterOffset + postfix.length(), 0);
 			fContentAssistSubjectControlAdapter.revealRange(fFilterOffset + postfix.length(), 0);
+			fLastCompletionOffset= fFilterOffset + postfix.length();
 
 			return false;
 		} catch (BadLocationException e) {
@@ -1283,5 +1351,11 @@ class CompletionProposalPopup implements IContentAssistListener {
 			insertion= proposal.getDisplayString();
 
 		return insertion;
+	}
+	
+	public void setMessage(String message) {
+		Assert.isNotNull(message);
+		if (isActive())
+			fMessageText.setText(message);
 	}
 }

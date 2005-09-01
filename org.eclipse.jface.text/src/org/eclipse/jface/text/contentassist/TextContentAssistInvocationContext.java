@@ -81,4 +81,21 @@ public class TextContentAssistInvocationContext extends ContentAssistInvocationC
 		
 		return fPrefix;
 	}
+	
+	/*
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	public boolean equals(Object obj) {
+		if (!super.equals(obj))
+			return false;
+		TextContentAssistInvocationContext other= (TextContentAssistInvocationContext) obj;
+		return fViewer.equals(other.fViewer) && fOffset == other.fOffset;
+	}
+	
+	/*
+	 * @see java.lang.Object#hashCode()
+	 */
+	public int hashCode() {
+		return super.hashCode() << 5 | fViewer.hashCode() << 3 | fOffset;
+	}
 }

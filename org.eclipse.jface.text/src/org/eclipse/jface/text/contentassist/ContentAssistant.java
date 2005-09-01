@@ -10,8 +10,10 @@
  *******************************************************************************/
 package org.eclipse.jface.text.contentassist;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -42,10 +44,6 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
 
-import org.eclipse.jface.contentassist.IContentAssistSubjectControl;
-import org.eclipse.jface.contentassist.ISubjectControlContentAssistProcessor;
-import org.eclipse.jface.dialogs.IDialogSettings;
-
 import org.eclipse.jface.text.Assert;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -60,12 +58,41 @@ import org.eclipse.jface.text.IWidgetTokenOwner;
 import org.eclipse.jface.text.IWidgetTokenOwnerExtension;
 import org.eclipse.jface.text.TextUtilities;
 
+import org.eclipse.jface.contentassist.IContentAssistSubjectControl;
+import org.eclipse.jface.contentassist.ISubjectControlContentAssistProcessor;
+import org.eclipse.jface.dialogs.IDialogSettings;
+
 
 /**
  * The standard implementation of the <code>IContentAssistant</code> interface.
  * Usually, clients instantiate this class and configure it before using it.
  */
 public class ContentAssistant implements IContentAssistant, IContentAssistantExtension, IWidgetTokenKeeper, IWidgetTokenKeeperExtension {
+	
+	/**
+	 * TODO this is provisional
+	 * @since 3.2
+	 */
+	public static interface ICompletionListener {
+		void proposalsAboutToShow(ContentAssistEvent event);
+	}
+	
+	/**
+	 * TODO provisional
+	 * @since 3.2
+	 */
+	public static final class ContentAssistEvent {
+		ContentAssistEvent(ContentAssistant ca, TextContentAssistInvocationContext ctx, IContentAssistProcessor proc, int rep) {
+			assistant= ca;
+			context= ctx;
+			processor= proc;
+			repetition= rep;
+		}
+		public final ContentAssistant assistant;
+		public final TextContentAssistInvocationContext context;
+		public final IContentAssistProcessor processor;
+		public final int repetition;
+	}
 
 	/**
 	 * A generic closer class used to monitor various
@@ -751,6 +778,9 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	 * @since 3.0
 	 */
 	private boolean fIsPrefixCompletionEnabled= false;
+	private List fCompletionListeners= new ArrayList();
+	private int fRepetition;
+	private String fMessage= ""; //$NON-NLS-1$
 
 	/**
 	 * Creates a new content assistant. The content assistant is not automatically activated,
@@ -1398,6 +1428,7 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	 */
 	protected void possibleCompletionsClosed() {
 		storeCompletionProposalPopupSize();
+		fRepetition= 0;
 	}
 
 	/*
@@ -1531,6 +1562,7 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 
 		IContentAssistProcessor p= getProcessor(viewer, offset);
 		if (p != null) {
+			fireEvent(viewer, offset, p);
 			result= p.computeCompletionProposals(viewer, offset);
 			fLastErrorMessage= p.getErrorMessage();
 		}
@@ -1877,5 +1909,42 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	 */
 	public boolean hasProposalPopupFocus() {
 		return fProposalPopup.hasFocus();
+	}
+	
+	public void setMessage(String message) {
+		Assert.isNotNull(message);
+		fMessage= message;
+		if (fProposalPopup != null)
+			fProposalPopup.setMessage(message);
+	}
+	
+	String getMessage() {
+		return fMessage;
+	}
+	
+	public void addListener(ICompletionListener listener) {
+		Assert.isNotNull(listener);
+		fCompletionListeners.add(listener);
+	}
+	
+	public void removeListener(ICompletionListener listener) {
+		fCompletionListeners.remove(listener);
+	}
+
+	private void fireEvent(ITextViewer viewer, int offset, IContentAssistProcessor processor) {
+		ContentAssistEvent event= new ContentAssistEvent(this, new TextContentAssistInvocationContext(viewer, offset), processor, fRepetition);
+		for (Iterator it= new ArrayList(fCompletionListeners).iterator(); it.hasNext();) {
+			ICompletionListener listener= (ICompletionListener) it.next();
+			listener.proposalsAboutToShow(event);
+		}
+	}
+
+	boolean recomputeOnRepetition() {
+		fRepetition++;
+		return true;
+	}
+
+	void resetRepetition() {
+		fRepetition= 0;
 	}
 }

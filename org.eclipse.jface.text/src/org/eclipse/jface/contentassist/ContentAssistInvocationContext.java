@@ -25,5 +25,47 @@ package org.eclipse.jface.contentassist;
  * @since 3.2
  */
 public class ContentAssistInvocationContext {
+	
+	/**
+	 * Invocation contexts are equal if the describe the same context and are of the same type. This
+	 * implementation checks for <code>null</code> values and class equality. Subclasses should
+	 * extend this method by adding checks for their context relevant fields (but not necessarily
+	 * cached values).
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * class MyContext extends ContentAssistInvocationContext {
+	 *     private final Object fState;
+	 *     public boolean equals(Object obb) {
+	 *         if (!super.equals(obj))
+	 *             return false;
+	 *         MyContext other= (MyContext) obj;
+	 *         return fState.equals(other.fState);
+	 *     } 
+	 * }
+	 * </pre>
+	 * </p>
+	 * <p>
+	 * Subclasses should also extend {@link Object#hashCode()}.
+	 * </p>
+	 * 
+	 * @param obj {@inheritDoc}
+	 * @return {@inheritDoc}
+	 */
+	public boolean equals(Object obj) {
+		if (obj == null)
+			return false;
+		if (!getClass().equals(obj.getClass()))
+			return false;
+
+		return true;
+	}
+	
+	/*
+	 * @see java.lang.Object#hashCode()
+	 */
+	public int hashCode() {
+		return 0;
+	}
 
 }
