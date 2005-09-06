@@ -208,9 +208,25 @@ class CompletionProposalPopup implements IContentAssistListener {
 	 * @since 3.1.1
 	 */
 	private boolean fIsFilterPending= false;
+	/**
+	 * The info message at the bottom of the popup, or <code>null</code> for no popup (if
+	 * ContentAssistant does not provide one).
+	 * 
+	 * @since 3.2
+	 */
 	private Label fMessageText;
-	private int fLastCompletionOffset;
+	/**
+	 * The font used for <code>fMessageText</code> or null; dispose when done.
+	 * 
+	 * @since 3.2
+	 */
 	private Font fMessageTextFont;
+	/**
+	 * The most recent completion offset (used to determine repeteated invocation)
+	 * 
+	 * @since 3.2
+	 */
+	private int fLastCompletionOffset;
 
 
 	/**
@@ -374,7 +390,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 		
 		String message= fContentAssistant.getMessage();
 		if (message != null) {
-			fMessageText= new Label(fProposalShell, SWT.NONE);
+			fMessageText= new Label(fProposalShell, SWT.LEFT);
 			GridData textData= new GridData(SWT.FILL, SWT.BOTTOM, true, false);
 			fMessageText.setLayoutData(textData);
 			fMessageText.setText(message);
