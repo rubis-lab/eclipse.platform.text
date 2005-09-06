@@ -1922,7 +1922,7 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 		return fMessage;
 	}
 	
-	public void addListener(ICompletionListener listener) {
+	public void addCompletionListener(ICompletionListener listener) {
 		Assert.isNotNull(listener);
 		fCompletionListeners.add(listener);
 	}

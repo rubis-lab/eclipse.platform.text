@@ -1097,6 +1097,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 			if (fLastCompletionOffset == fFilterOffset) {
 				handleRepeatedInvocation();
 			} else {
+				fLastCompletionOffset= fFilterOffset;
 				completeCommonPrefix();
 			}
 		} else {
