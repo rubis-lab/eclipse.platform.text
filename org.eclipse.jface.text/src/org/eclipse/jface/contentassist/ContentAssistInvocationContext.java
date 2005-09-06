@@ -11,39 +11,47 @@
 package org.eclipse.jface.contentassist;
 
 /**
- * Describes the context of an invocation of content assist. For a text
- * editor, the context would typically include the document (or the
- * viewer) and the selection range, while source code editors may
- * provide specific context information such as an AST.
+ * Describes the context of an invocation of content assist. For a text editor, the context would
+ * typically include the document (or the viewer) and the selection range, while source code editors
+ * may provide specific context information such as an AST.
  * <p>
- * An invocation context may also compute additional context information
- * on demand and cache it to make it available to all
- * {@link org.eclipse.jface.text.contentassist.ICompletionProposalComputer}s
+ * An invocation context may also compute additional context information on demand and cache it to
+ * make it available to all {@link org.eclipse.jface.text.contentassist.ICompletionProposalComputer}s
  * contributing proposals to one content assist invocation.
+ * </p>
+ * <p>
+ * Clients may subclass but must be careful to adhere to the described
+ * {@link #equals(Object) equality} contract.
  * </p>
  * 
  * @since 3.2
  */
-public class ContentAssistInvocationContext {
+public abstract class ContentAssistInvocationContext {
 	
 	/**
-	 * Invocation contexts are equal if the describe the same context and are of the same type. This
-	 * implementation checks for <code>null</code> values and class equality. Subclasses should
-	 * extend this method by adding checks for their context relevant fields (but not necessarily
-	 * cached values).
+	 * Invocation contexts are equal if they describe the same context and are of the same type.
+	 * This implementation checks for <code>null</code> values and class equality. Subclasses
+	 * should extend this method by adding checks for their context relevant fields (but not
+	 * necessarily cached values).
 	 * <p>
 	 * Example:
+	 * 
 	 * <pre>
 	 * class MyContext extends ContentAssistInvocationContext {
-	 *     private final Object fState;
-	 *     public boolean equals(Object obb) {
-	 *         if (!super.equals(obj))
-	 *             return false;
-	 *         MyContext other= (MyContext) obj;
-	 *         return fState.equals(other.fState);
-	 *     } 
+	 * 	private final Object fState;
+	 * 	private Object fCachedInfo;
+	 * 
+	 * 	...
+	 * 
+	 * 	public boolean equals(Object obb) {
+	 * 		if (!super.equals(obj))
+	 * 			return false;
+	 * 		MyContext other= (MyContext) obj;
+	 * 		return fState.equals(other.fState);
+	 * 	}
 	 * }
 	 * </pre>
+	 * 
 	 * </p>
 	 * <p>
 	 * Subclasses should also extend {@link Object#hashCode()}.
@@ -65,7 +73,7 @@ public class ContentAssistInvocationContext {
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-		return 0;
+		return 23459213; // random
 	}
 
 }

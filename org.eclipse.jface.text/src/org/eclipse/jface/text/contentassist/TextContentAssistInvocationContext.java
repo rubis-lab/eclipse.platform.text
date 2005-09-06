@@ -21,31 +21,58 @@ import org.eclipse.jface.contentassist.ContentAssistInvocationContext;
  * A content assist invocation context for text viewers. The context knows the
  * viewer, the invocation offset and can lazily compute the identifier
  * prefix preceding the invocation offset.
+ * <p>
+ * Clients may instantiate and subclass.
+ * </p>
  * 
  * @since 3.2
  */
 public class TextContentAssistInvocationContext extends ContentAssistInvocationContext {
 	
+	/* state */
 	private final ITextViewer fViewer;
 	private final int fOffset;
 	
+	/* cached additional info */
 	private CharSequence fPrefix;
 	
+	/**
+	 * Equivalent to
+	 * {@linkplain #TextContentAssistInvocationContext(ITextViewer, int) TextContentAssistInvocationContext(viewer, viewer.getSelectedRange().x)}.
+	 * 
+	 * @param viewer the text viewer that content assist is invoked in
+	 */
 	public TextContentAssistInvocationContext(ITextViewer viewer) {
 		this(viewer, viewer.getSelectedRange().x);
 	}
 
+	/**
+	 * Creates a new context for the given viewer and offset.
+	 * 
+	 * @param viewer the text viewer that content assist is invoked in
+	 * @param offset the offset into the viewer's document where content assist is invoked at
+	 */
 	public TextContentAssistInvocationContext(ITextViewer viewer, int offset) {
 		Assert.isNotNull(viewer);
 		fViewer= viewer;
 		fOffset= offset;
 	}
 	
-	public int getInvocationOffset() {
+	/**
+	 * Returns the invocation offset.
+	 * 
+	 * @return the invocation offset
+	 */
+	public final int getInvocationOffset() {
 		return fOffset;
 	}
 	
-	public ITextViewer getViewer() {
+	/**
+	 * Returns the viewer.
+	 * 
+	 * @return the viewer
+	 */
+	public final ITextViewer getViewer() {
 		return fViewer;
 	}
 	
@@ -59,12 +86,11 @@ public class TextContentAssistInvocationContext extends ContentAssistInvocationC
 	}
 	
 	/**
-	 * Computes the identifier (as specified by
-	 * {@link Character#isJavaIdentifierPart(char)}) that immediately
-	 * precedes the invocation offset.
+	 * Computes the identifier (as specified by {@link Character#isJavaIdentifierPart(char)}) that
+	 * immediately precedes the invocation offset.
 	 * 
 	 * @return the prefix preceding the content assist invocation offset
-	 * @throws BadLocationException
+	 * @throws BadLocationException if accessing the document fails
 	 */
 	public CharSequence computeIdentifierPrefix() throws BadLocationException {
 		if (fPrefix == null) {

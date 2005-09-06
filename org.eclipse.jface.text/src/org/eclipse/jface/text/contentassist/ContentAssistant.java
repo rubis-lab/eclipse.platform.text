@@ -70,31 +70,6 @@ import org.eclipse.jface.dialogs.IDialogSettings;
 public class ContentAssistant implements IContentAssistant, IContentAssistantExtension, IWidgetTokenKeeper, IWidgetTokenKeeperExtension {
 	
 	/**
-	 * TODO this is provisional
-	 * @since 3.2
-	 */
-	public static interface ICompletionListener {
-		void proposalsAboutToShow(ContentAssistEvent event);
-	}
-	
-	/**
-	 * TODO provisional
-	 * @since 3.2
-	 */
-	public static final class ContentAssistEvent {
-		ContentAssistEvent(ContentAssistant ca, TextContentAssistInvocationContext ctx, IContentAssistProcessor proc, int rep) {
-			assistant= ca;
-			context= ctx;
-			processor= proc;
-			repetition= rep;
-		}
-		public final ContentAssistant assistant;
-		public final TextContentAssistInvocationContext context;
-		public final IContentAssistProcessor processor;
-		public final int repetition;
-	}
-
-	/**
 	 * A generic closer class used to monitor various
 	 * interface events in order to determine whether
 	 * content-assist should be terminated and all
@@ -778,9 +753,26 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	 * @since 3.0
 	 */
 	private boolean fIsPrefixCompletionEnabled= false;
+	/**
+	 * The list of completion listeners.
+	 * 
+	 * @since 3.2
+	 */
 	private List fCompletionListeners= new ArrayList();
+	/**
+	 * The repetition count - counts how many times code completion was invoked at the same offset
+	 * in a single code completion session.
+	 * 
+	 * @since 3.2
+	 */
 	private int fRepetition;
-	private String fMessage= ""; //$NON-NLS-1$
+	/**
+	 * The message to display at the bottom of the proposal popup, or <code>null</code> if no
+	 * message should be shown.
+	 * 
+	 * @since 3.2
+	 */
+	private String fMessage= null;
 
 	/**
 	 * Creates a new content assistant. The content assistant is not automatically activated,
@@ -1911,6 +1903,12 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 		return fProposalPopup.hasFocus();
 	}
 	
+	/**
+	 * Sets the caption message displayed at the bottom of the completion proposal popup.
+	 * 
+	 * @param message the message
+	 * @since 3.2
+	 */
 	public void setMessage(String message) {
 		Assert.isNotNull(message);
 		fMessage= message;
@@ -1922,11 +1920,23 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 		return fMessage;
 	}
 	
+	/**
+	 * Adds a completion listener that will be informed before proposals are computed.
+	 * 
+	 * @param listener the listener
+	 * @since 3.2
+	 */
 	public void addCompletionListener(ICompletionListener listener) {
 		Assert.isNotNull(listener);
 		fCompletionListeners.add(listener);
 	}
 	
+	/**
+	 * Removes the completion listener.
+	 * 
+	 * @param listener the listener to remove
+	 * @since 3.2
+	 */
 	public void removeListener(ICompletionListener listener) {
 		fCompletionListeners.remove(listener);
 	}
@@ -1935,7 +1945,7 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 		ContentAssistEvent event= new ContentAssistEvent(this, new TextContentAssistInvocationContext(viewer, offset), processor, fRepetition);
 		for (Iterator it= new ArrayList(fCompletionListeners).iterator(); it.hasNext();) {
 			ICompletionListener listener= (ICompletionListener) it.next();
-			listener.proposalsAboutToShow(event);
+			listener.computingProposals(event);
 		}
 	}
 

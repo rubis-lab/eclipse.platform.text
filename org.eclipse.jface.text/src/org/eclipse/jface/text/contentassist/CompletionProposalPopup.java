@@ -371,19 +371,22 @@ class CompletionProposalPopup implements IContentAssistListener {
 		layout.marginHeight= 0;
 		layout.verticalSpacing= 1;
 		fProposalShell.setLayout(layout);
-
-		fMessageText= new Label(fProposalShell, SWT.NONE);
-		GridData textData= new GridData(SWT.FILL, SWT.BOTTOM, true, false);
-		fMessageText.setLayoutData(textData);
-		fMessageText.setText(fContentAssistant.getMessage());
-		Font font= fMessageText.getFont();
-		Display display= fProposalShell.getDisplay();
-		FontData[] fontDatas= font.getFontData();
-		for (int i= 0; i < fontDatas.length; i++)
-			fontDatas[i].setHeight(fontDatas[i].getHeight() * 9 / 10);
-		fMessageTextFont= new Font(display, fontDatas);
-		fMessageText.setFont(fMessageTextFont);
-		fMessageText.setCursor(fProposalShell.getDisplay().getSystemCursor(SWT.CURSOR_HAND));
+		
+		String message= fContentAssistant.getMessage();
+		if (message != null) {
+			fMessageText= new Label(fProposalShell, SWT.NONE);
+			GridData textData= new GridData(SWT.FILL, SWT.BOTTOM, true, false);
+			fMessageText.setLayoutData(textData);
+			fMessageText.setText(message);
+			Font font= fMessageText.getFont();
+			Display display= fProposalShell.getDisplay();
+			FontData[] fontDatas= font.getFontData();
+			for (int i= 0; i < fontDatas.length; i++)
+				fontDatas[i].setHeight(fontDatas[i].getHeight() * 9 / 10);
+			fMessageTextFont= new Font(display, fontDatas);
+			fMessageText.setFont(fMessageTextFont);
+			fMessageText.setCursor(fProposalShell.getDisplay().getSystemCursor(SWT.CURSOR_HAND));
+		}
 
 		GridData data= new GridData(GridData.FILL_BOTH);
 
@@ -420,7 +423,8 @@ class CompletionProposalPopup implements IContentAssistListener {
 		if (c == null)
 			c= control.getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 		fProposalTable.setBackground(c);
-		fMessageText.setBackground(c);
+		if (fMessageText != null)
+			fMessageText.setBackground(c);
 
 		c= fContentAssistant.getProposalSelectorForeground();
 		if (c == null)
@@ -447,15 +451,17 @@ class CompletionProposalPopup implements IContentAssistListener {
 		fProposalTable.setHeaderVisible(false);
 		fContentAssistant.addToLayout(this, fProposalShell, ContentAssistant.LayoutManager.LAYOUT_PROPOSAL_SELECTOR, fContentAssistant.getSelectionOffset());
 		
-		fMessageText.addMouseListener(new MouseAdapter() {
-			public void mouseUp(MouseEvent e) {
-				fLastCompletionOffset= fFilterOffset;
-				handleRepeatedInvocation();
-			}
-		
-			public void mouseDown(MouseEvent e) {
-			}
-		});
+		if (fMessageText != null) {
+			fMessageText.addMouseListener(new MouseAdapter() {
+				public void mouseUp(MouseEvent e) {
+					fLastCompletionOffset= fFilterOffset;
+					handleRepeatedInvocation();
+				}
+				
+				public void mouseDown(MouseEvent e) {
+				}
+			});
+		}
 	}
 
 	/*
@@ -1356,7 +1362,7 @@ class CompletionProposalPopup implements IContentAssistListener {
 	
 	public void setMessage(String message) {
 		Assert.isNotNull(message);
-		if (isActive())
+		if (isActive() && fMessageText != null)
 			fMessageText.setText(message);
 	}
 }
