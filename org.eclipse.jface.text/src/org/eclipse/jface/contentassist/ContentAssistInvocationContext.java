@@ -23,6 +23,9 @@ package org.eclipse.jface.contentassist;
  * Clients may subclass but must be careful to adhere to the described
  * {@link #equals(Object) equality} contract.
  * </p>
+ * <p>
+ * XXX this API is provisional and may change anytime during the course of 3.2
+ * </p>
  * 
  * @since 3.2
  */

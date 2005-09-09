@@ -227,6 +227,10 @@ class CompletionProposalPopup implements IContentAssistListener {
 	 * @since 3.2
 	 */
 	private int fLastCompletionOffset;
+	/**
+	 * Usually <code>true</code>, <code>false</code> if the popup is displaying an empty list after repeated invocation.
+	 */
+	private boolean fHasProposals;
 
 
 	/**
@@ -290,22 +294,26 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 					int count= (fComputedProposals == null ? 0 : fComputedProposals.length);
 					if (count == 0) {
-
-						if (!autoActivated)
-							control.getDisplay().beep();
-
-						hide();
-
-					} else {
-
-						if (count == 1 && !autoActivated && canAutoInsert(fComputedProposals[0])) {
-							insertProposal(fComputedProposals[0], (char) 0, 0, fInvocationOffset);
-							hide();
-						} else {
-							createProposalSelector();
-							setProposals(fComputedProposals, false);
-							displayProposals();
+						if (fContentAssistant.recomputeOnRepetition()) {
+							fComputedProposals= computeProposals(fInvocationOffset);
+							count= (fComputedProposals == null ? 0 : fComputedProposals.length);
 						}
+						if (count == 0) {
+							if (!autoActivated)
+								control.getDisplay().beep();
+							
+							hide();
+							return;
+						}
+					}
+					
+					if (count == 1 && !autoActivated && canAutoInsert(fComputedProposals[0])) {
+						insertProposal(fComputedProposals[0], (char) 0, 0, fInvocationOffset);
+						hide();
+					} else {
+						createProposalSelector();
+						setProposals(fComputedProposals, false);
+						displayProposals();
 					}
 				}
 			});
@@ -323,15 +331,11 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 	private void handleRepeatedInvocation() {
 		ICompletionProposal[] recomputed= null;
-		do {
-			if (fContentAssistant.recomputeOnRepetition()) {
-				recomputed= computeProposals(fFilterOffset);
-			} else {
-				break;
-			}
-		} while (recomputed == null || recomputed.length == 0);
-		if (recomputed != null)
-			setProposals(recomputed, false);
+		if (fContentAssistant.recomputeOnRepetition()) {
+			recomputed= computeProposals(fFilterOffset);
+			if (recomputed != null)
+				setProposals(recomputed, false);
+		}
 	}
 
 	/**
@@ -390,10 +394,10 @@ class CompletionProposalPopup implements IContentAssistListener {
 		
 		String message= fContentAssistant.getMessage();
 		if (message != null) {
-			fMessageText= new Label(fProposalShell, SWT.LEFT);
+			fMessageText= new Label(fProposalShell, SWT.RIGHT);
 			GridData textData= new GridData(SWT.FILL, SWT.BOTTOM, true, false);
 			fMessageText.setLayoutData(textData);
-			fMessageText.setText(message);
+			fMessageText.setText(message + " "); //$NON-NLS-1$
 			Font font= fMessageText.getFont();
 			Display display= fProposalShell.getDisplay();
 			FontData[] fontDatas= font.getFontData();
@@ -546,6 +550,9 @@ class CompletionProposalPopup implements IContentAssistListener {
 	 */
 	private void insertProposal(ICompletionProposal p, char trigger, int stateMask, final int offset) {
 
+		if (!fHasProposals)
+			return;
+		
 		fInserting= true;
 		IRewriteTarget target= null;
 		IEditingSupport helper= new IEditingSupport() {
@@ -721,6 +728,15 @@ class CompletionProposalPopup implements IContentAssistListener {
 			ICompletionProposal oldProposal= getSelectedProposal();
 			if (oldProposal instanceof ICompletionProposalExtension2 && fViewer != null)
 				((ICompletionProposalExtension2) oldProposal).unselected(fViewer);
+			
+			if (proposals == null || proposals.length == 0) {
+				proposals= new ICompletionProposal[] { new CompletionProposal(JFaceTextMessages.getString("CompletionProposalPopup.no_proposals"), fFilterOffset, 0, 0)}; //$NON-NLS-1$
+				fProposalTable.setEnabled(false);
+				fHasProposals= false;
+			} else {
+				fProposalTable.setEnabled(true);
+				fHasProposals= true;
+			}
 
 			fFilteredProposals= proposals;
 			final int newLen= proposals.length;
@@ -1141,9 +1157,19 @@ class CompletionProposalPopup implements IContentAssistListener {
 
 					int count= (fFilteredProposals == null ? 0 : fFilteredProposals.length);
 					if (count == 0) {
-						control.getDisplay().beep();
-						hide();
-					} else if (count == 1 && canAutoInsert(fFilteredProposals[0])) {
+						if (fContentAssistant.recomputeOnRepetition()) {
+							fFilteredProposals= computeProposals(fInvocationOffset);
+							count= (fFilteredProposals == null ? 0 : fFilteredProposals.length);
+						}
+						
+						if (count == 0) {
+							control.getDisplay().beep();
+							hide();
+							return;
+						}
+					}
+					
+					if (count == 1 && canAutoInsert(fFilteredProposals[0])) {
 						insertProposal(fFilteredProposals[0], (char) 0, 0, fInvocationOffset);
 						hide();
 					} else {
@@ -1379,6 +1405,6 @@ class CompletionProposalPopup implements IContentAssistListener {
 	public void setMessage(String message) {
 		Assert.isNotNull(message);
 		if (isActive() && fMessageText != null)
-			fMessageText.setText(message);
+			fMessageText.setText(message + " "); //$NON-NLS-1$
 	}
 }

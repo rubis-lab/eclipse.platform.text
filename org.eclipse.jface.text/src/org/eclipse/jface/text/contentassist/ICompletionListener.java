@@ -5,6 +5,9 @@ package org.eclipse.jface.text.contentassist;
  * <p>
  * Clients may implement this interface.
  * </p>
+ * <p>
+ * XXX this API is provisional and may change anytime during the course of 3.2
+ * </p>
  * 
  * @since 3.2
  */

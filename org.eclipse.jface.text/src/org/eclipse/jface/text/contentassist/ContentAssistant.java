@@ -1922,6 +1922,9 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	
 	/**
 	 * Adds a completion listener that will be informed before proposals are computed.
+	 * <p>
+	 * XXX this API is provisional and may change anytime during the course of 3.2
+	 * </p>
 	 * 
 	 * @param listener the listener
 	 * @since 3.2
@@ -1933,6 +1936,9 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 	
 	/**
 	 * Removes the completion listener.
+	 * <p>
+	 * XXX this API is provisional and may change anytime during the course of 3.2
+	 * </p>
 	 * 
 	 * @param listener the listener to remove
 	 * @since 3.2
@@ -1951,7 +1957,11 @@ public class ContentAssistant implements IContentAssistant, IContentAssistantExt
 
 	boolean recomputeOnRepetition() {
 		fRepetition++;
-		return true;
+		return doRepetitionHandling();
+	}
+
+	private boolean doRepetitionHandling() {
+		return fMessage != null;
 	}
 
 	void resetRepetition() {

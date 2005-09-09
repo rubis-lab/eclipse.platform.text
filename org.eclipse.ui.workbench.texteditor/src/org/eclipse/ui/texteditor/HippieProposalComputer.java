@@ -41,8 +41,13 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.texteditor.HippieCompletionEngine;
 
 /**
- * A completion proposal computer for hippie word completions. Clients
- * may instantiate. TODO API doc.
+ * A completion proposal computer for hippie word completions.
+ * <p>
+ * Clients may instantiate.
+ * </p>
+ * <p>
+ * XXX this API is provisional and may change anytime during the course of 3.2
+ * </p>
  * 
  * @since 3.2
  */

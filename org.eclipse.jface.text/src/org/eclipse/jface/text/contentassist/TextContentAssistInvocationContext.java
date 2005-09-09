@@ -24,6 +24,9 @@ import org.eclipse.jface.contentassist.ContentAssistInvocationContext;
  * <p>
  * Clients may instantiate and subclass.
  * </p>
+ * <p>
+ * XXX this API is provisional and may change anytime during the course of 3.2
+ * </p>
  * 
  * @since 3.2
  */
