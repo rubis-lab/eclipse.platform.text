@@ -37,7 +37,7 @@ public class Document extends AbstractDocument {
 	 */
 	public Document() {
 		super();
-		setTextStore(new CopyOnWriteTextStore(new GapTextStore(50, 300)));
+		setTextStore(new CopyOnWriteTextStore(new GapTextStore(256, 4096, 0.1f)));
 		setLineTracker(new DefaultLineTracker());
 		completeInitialization();
 	}
@@ -49,7 +49,7 @@ public class Document extends AbstractDocument {
 	 */
 	public Document(String initialContent) {
 		super();
-		setTextStore(new CopyOnWriteTextStore(new GapTextStore(50, 300)));
+		setTextStore(new CopyOnWriteTextStore(new GapTextStore(256, 4096, 0.1f)));
 		setLineTracker(new DefaultLineTracker());
 		getStore().set(initialContent);
 		getTracker().set(initialContent);
