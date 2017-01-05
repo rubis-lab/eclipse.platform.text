@@ -428,7 +428,7 @@
          point="org.eclipse.ui.actionSets">
       <actionSet
             label="%textEditorAnnotationNavigationActionSet.label"
-            visible="true"
+            visible="false"
             id="org.eclipse.ui.edit.text.actionSet.annotationNavigation">
          <action
                allowLabelUpdate="true"
@@ -459,7 +459,7 @@
       </actionSet>
       <actionSet
             label="%textEditorNavigationActionSet.label"
-            visible="true"
+            visible="false"
             id="org.eclipse.ui.edit.text.actionSet.navigation">
          <action
                toolbarPath="org.eclipse.ui.workbench.navigate/history.group"
@@ -476,7 +476,7 @@
       </actionSet>
 	  <actionSet
 	    label="%conversionActionSet.label"
-	    visible="true"
+	    visible="false"
 	    id="org.eclipse.ui.edit.text.actionSet.convertLineDelimitersTo">
          <menu
                label="%conversionSubMenu.label"

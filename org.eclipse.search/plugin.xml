@@ -171,7 +171,7 @@
 		<actionSet
 			id="org.eclipse.search.searchActionSet"
 	        label="%search"
-			visible="true">
+			visible="false">
 	
 			<!-- =================================================================== -->
 			<!-- Search Menu                                                         -->
